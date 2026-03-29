@@ -34,7 +34,10 @@
 export default {
   name: 'HelloWorld',
   props: {
-    msg: String
+    msg: {
+      type: String,
+      default: '欢迎来到前后端连接测试应用'
+    }
   }
 }
 </script>
