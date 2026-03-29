@@ -6,34 +6,20 @@
     <div v-else-if="error">错误: {{ error }}</div>
     <div v-else>
       <div v-for="user in users" :key="user.id" class="user-card">
-        <h3>{{ user.name }}</h3>
-        <p>年龄: {{ user.age }}</p>
-        <p>爱好: {{ user.hobbies.join(', ') }}</p>
-        <p>地址: {{ user.address.city }}, {{ user.address.street }}</p>
+        <h3>账号: {{ user.account }}</h3>
+        <p>创建时间: {{ user.create_at }}</p>
       </div>
       <div v-if="users.length === 0">暂无用户数据</div>
     </div>
     <h2>添加用户</h2>
     <form @submit.prevent="addUser">
       <div>
-        <label>姓名:</label>
-        <input v-model="newUser.name" type="text" required>
+        <label>账号:</label>
+        <input v-model="newUser.account" type="text" required>
       </div>
       <div>
-        <label>年龄:</label>
-        <input v-model.number="newUser.age" type="number" required>
-      </div>
-      <div>
-        <label>爱好:</label>
-        <input v-model="hobbiesInput" type="text" placeholder="用逗号分隔">
-      </div>
-      <div>
-        <label>城市:</label>
-        <input v-model="newUser.address.city" type="text" required>
-      </div>
-      <div>
-        <label>街道:</label>
-        <input v-model="newUser.address.street" type="text" required>
+        <label>密码:</label>
+        <input v-model="newUser.password" type="password" required>
       </div>
       <button type="submit">添加用户</button>
     </form>
@@ -51,15 +37,9 @@ export default {
       loading: false,
       error: null,
       newUser: {
-        name: '',
-        age: 0,
-        hobbies: [],
-        address: {
-          city: '',
-          street: ''
-        }
-      },
-      hobbiesInput: ''
+        account: '',
+        password: ''
+      }
     }
   },
   mounted() {
@@ -80,7 +60,6 @@ export default {
       }
     },
     async addUser() {
-      this.newUser.hobbies = this.hobbiesInput.split(',').map(hobby => hobby.trim())
       this.loading = true
       this.error = null
       try {
@@ -96,15 +75,9 @@ export default {
     },
     resetForm() {
       this.newUser = {
-        name: '',
-        age: 0,
-        hobbies: [],
-        address: {
-          city: '',
-          street: ''
-        }
+        account: '',
+        password: ''
       }
-      this.hobbiesInput = ''
     }
   }
 }

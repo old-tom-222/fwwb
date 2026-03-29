@@ -32,6 +32,8 @@ public class UserController {
     @PostMapping
     @Operation(summary = "创建新用户", description = "接收用户数据并保存到数据库，返回保存后的用户对象")
     public User createUser(@RequestBody User user) {
+        // create_at 在后端自动赋值为当前时间，避免前端传入不一致
+        user.setCreate_at(java.time.LocalDateTime.now().toString());
         return userRepository.save(user);
     }
 

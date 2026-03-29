@@ -11,14 +11,9 @@ import java.util.List;
 public class User {
     @Id
     private String id;
-    private String name;
-    private int age;
-    private List<String> hobbies;
-    private Address address;
 
-    @Data
-    public static class Address {
-        private String city;
-        private String street;
-    }
+    private String account;
+    private String password;
+    private String create_at;
+    
 }
