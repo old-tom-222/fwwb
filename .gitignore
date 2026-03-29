@@ -1,24 +1,24 @@
-# 后端忽略规则
-HELP.md
-target/
+# 后端忽略规则（已取消忽略基础配置）
+# HELP.md
+# target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+### STS ###（已取消忽略）
+# .apt_generated
+# .classpath
+# .factorypath
+# .project
+# .settings
+# .springBeans
+# .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+### IntelliJ IDEA ###（已取消忽略）
+# .idea
+# *.iws
+# *.iml
+# *.ipr
 
 ### NetBeans ###
 /nbproject/private/
@@ -30,13 +30,13 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+### VS Code ###（已取消忽略）
+# .vscode/
 
-# 前端忽略规则
-.DS_Store
-node_modules
-/dist
+# 前端忽略规则（已取消忽略node_modules）
+# .DS_Store
+# node_modules
+# /dist
 
 # local env files
 .env.local
