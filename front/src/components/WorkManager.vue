@@ -12,6 +12,8 @@
       <div class="login-status">
         <div v-if="isLoggedIn">
           <p>欢迎, {{ userName }}</p>
+          <p class="user-id">ID: {{ userId }}</p>
+          <button @click="logout" class="logout-btn">退出登录</button>
         </div>
         <div v-else>
           <button @click="showLoginModal = true" class="login-btn">登录</button>
@@ -55,6 +57,7 @@ export default {
     return {
       isLoggedIn: false,
       userName: '',
+      userId: '', // 添加：用户 ID
       showLoginModal: false,
       loginForm: {
         account: '',
@@ -78,6 +81,12 @@ export default {
         if (response.data) {
           this.isLoggedIn = true
           this.userName = response.data.name || response.data.account
+          this.userId = response.data.id  // 保存用户 ID
+
+          // 持久化保存到 localStorage
+          localStorage.setItem('userId', response.data.id)
+          localStorage.setItem('userName', this.userName)
+
           this.showLoginModal = false
           this.loginForm = { account: '', password: '' }
         } else {
@@ -86,7 +95,32 @@ export default {
       } catch (error) {
         alert('登录失败：' + error.message)
       }
+    },
+
+    // 从 localStorage 恢复登录状态
+    checkLoginStatus() {
+      const savedUserId = localStorage.getItem('userId')
+      const savedUserName = localStorage.getItem('userName')
+
+      if (savedUserId && savedUserName) {
+        this.isLoggedIn = true
+        this.userId = savedUserId
+        this.userName = savedUserName
+      }
+    },
+
+    // 登出功能
+    logout() {
+      localStorage.removeItem('userId')
+      localStorage.removeItem('userName')
+      this.isLoggedIn = false
+      this.userName = ''
+      this.userId = ''
     }
+  },
+  mounted() {
+    // 页面加载时检查是否已有登录状态
+    this.checkLoginStatus()
   }
 }
 </script>
@@ -199,6 +233,27 @@ export default {
 
 .login-btn:hover {
   background-color: #2c3e50;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #e0e0e0;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.logout-btn:hover {
+  background-color: #d0d0d0;
+}
+
+.user-id {
+  font-size: 12px;
+  color: #666;
+  margin: 5px 0;
 }
 
 .new-chat-btn {

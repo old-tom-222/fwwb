@@ -1,3 +1,5 @@
-com\example\demo\controller\UserController.class
 com\example\demo\model\User.class
 com\example\demo\repository\UserRepository.class
+com\example\demo\model\Message.class
+com\example\demo\controller\UserController.class
+com\example\demo\repository\MessageRepository.class
