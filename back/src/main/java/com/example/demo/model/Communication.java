@@ -8,27 +8,24 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import java.util.Date;
 
 @Data
-@Document(collection = "massage")
-public class Message {
+@Document(collection = "communication")
+public class Communication {
     @Id
     private String id;
     
-    private String communicationId;
+    private String userId;
     
-    private Integer status;
-    
-    private String content;
+    private String name;
     
     @Field("create_at")
     private Date createdAt;
 
-    public Message() {
+    public Communication() {
     }
 
-    public Message(String communicationId, Integer status, String content) {
-        this.communicationId = communicationId;
-        this.status = status;
-        this.content = content;
+    public Communication(String userId, String name) {
+        this.userId = userId;
+        this.name = name;
         this.createdAt = new Date();
     }
 }
