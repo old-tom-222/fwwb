@@ -4,6 +4,8 @@
       <h2>智能文档处理助手</h2>
       <button class="new-chat-btn">云仓库</button>
       <button class="new-chat-btn">新对话</button>
+      <div class="divider"></div>
+      <h3 class="history-title">历史对话</h3>
       <!-- <ul>
         <li><router-link to="/">工作管理</router-link></li>
       </ul> -->
@@ -19,6 +21,9 @@
     <main class="content">
       <h1>{{ greeting }}</h1>
       <!-- <p>这是工作管理页面</p> -->
+      <div class="input-area">
+        <textarea class="chat-input" placeholder="输入消息..."></textarea>
+      </div>
     </main>
     <!-- 登录模态框 -->
     <div v-if="showLoginModal" class="modal-overlay" @click="showLoginModal = false">
@@ -89,7 +94,7 @@ export default {
 <style scoped>
 .work-manager {
   display: flex;
-  min-height: 100vh;
+  min-height: 80vh;
 }
 
 .sidebar {
@@ -147,13 +152,39 @@ export default {
   margin-top: 40vh;
 }
 
+.input-area {
+  position: absolute;
+  bottom: 50px;
+  left: 100px;
+  right: 100px;
+  height: 80px;
+  background-color: white;
+  border: 2px solid black;
+  border-radius: 8px;
+  padding: 15px;
+  box-sizing: border-box;
+  overflow-y: hidden;
+}
+
+.chat-input {
+  width: 95%;
+  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .login-status {
   position: absolute;
-  bottom: 20px;
+  bottom: 10px;
   left: 20px;
   right: 20px;
   border-top: 1px solid #666;
-  padding-top: 20px;
+  padding-top: 10px;
+  font-weight: bold;
+
 }
 
 .login-btn {
@@ -178,11 +209,29 @@ export default {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  margin-bottom: 20px;
+  margin-bottom: 0px;
+  font-weight: bold;
+  font-size: 16px;
 }
 
 .new-chat-btn:hover {
   background-color: #d0d0d0;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: #666;
+  margin: 15px 0;
+}
+
+.history-title {
+  width: 100%;
+
+  color: #000000;
+  font-size: 15px;
+  margin: 0 0 10px 0;
+  font-weight: normal;
 }
 
 .modal-overlay {
