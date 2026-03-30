@@ -168,23 +168,91 @@ public class MessageController {
      */
     private String generateDocxFile(String content, String communicationId) {
         try {
-            // 生成唯一文件名
             String fileName = "document_" + communicationId + "_" + System.currentTimeMillis() + ".docx";
             String filePath = "uploads/" + fileName;
             
-            // 这里使用Apache POI生成docx文档
-            // 实际实现需要添加Apache POI依赖
-            // 这里简化处理，创建一个简单的文本文件
             java.io.File file = new java.io.File(filePath);
             java.io.FileWriter writer = new java.io.FileWriter(file);
             writer.write(content);
             writer.close();
             
-            // 返回下载链接
             return "http://localhost:8081/" + filePath;
         } catch (Exception e) {
             e.printStackTrace();
             return "生成文档失败";
+        }
+    }
+    
+    @PostMapping("/generate-xlsx")
+    @Operation(summary = "生成xlsx表格", description = "根据用户输入和文件分析关键词，生成xlsx表格并返回下载链接")
+    public Message generateXlsx(@RequestParam("communicationId") String communicationId,
+                               @RequestParam("content") String content,
+                               @RequestParam(value = "files", required = false) MultipartFile[] files) {
+        List<String> fileContents = new ArrayList<>();
+        if (files != null && files.length > 0) {
+            for (MultipartFile file : files) {
+                try {
+                    String fileContent = FileParser.parseFile(file.getOriginalFilename(), file.getInputStream());
+                    fileContents.add(fileContent);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        Message userMessage = new Message();
+        userMessage.setCommunicationId(communicationId);
+        userMessage.setContent(content);
+        userMessage.setStatus(1);
+        userMessage.setCreatedAt(new java.util.Date());
+        messageRepository.save(userMessage);
+        
+        String aiResponse = zhipuAIService.chat(content, fileContents);
+        
+        String xlsxUrl = generateXlsxFile(aiResponse, communicationId);
+        
+        String responseWithLink = "我已经为您生成了xlsx表格，请点击以下链接下载：\n" + xlsxUrl;
+        
+        String formattedResponse = AIResponseFormatter.formatResponse(responseWithLink);
+        
+        Message aiMessage = new Message();
+        aiMessage.setCommunicationId(communicationId);
+        aiMessage.setContent(formattedResponse);
+        aiMessage.setStatus(0);
+        aiMessage.setCreatedAt(new java.util.Date());
+        messageRepository.save(aiMessage);
+        
+        return aiMessage;
+    }
+    
+    private String generateXlsxFile(String content, String communicationId) {
+        try {
+            String fileName = "table_" + communicationId + "_" + System.currentTimeMillis() + ".xlsx";
+            String filePath = "uploads/" + fileName;
+            
+            org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("分析结果");
+            
+            String[] lines = content.split("\n");
+            int rowIndex = 0;
+            for (String line : lines) {
+                if (line.trim().isEmpty()) continue;
+                org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIndex++);
+                String[] cells = line.split("[|,，\t]");
+                for (int i = 0; i < cells.length; i++) {
+                    row.createCell(i).setCellValue(cells[i].trim());
+                }
+            }
+            
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(filePath);
+            workbook.write(fos);
+            workbook.close();
+            fos.close();
+            
+            return "http://localhost:8081/" + filePath;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "生成表格失败";
         }
     }
 }

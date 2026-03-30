@@ -94,7 +94,8 @@
               正在思考中...
             </div>
             <button class="send-btn main-btn" @click="sendMessage" :disabled="loading">发送</button>
-            <button class="docx-btn main-btn" @click="generateDocx" :disabled="loading">docx</button>
+            <button class="send-btn main-btn" @click="generateDocx" :disabled="loading">docx</button>
+            <button class="send-btn main-btn" @click="generateXlsx" :disabled="loading">xlsx</button>
             <button class="hide-btn main-btn" @click="toggleInputArea" :disabled="loading">隐藏</button>
           </div>
         </div>
@@ -723,6 +724,68 @@ export default {
         // 无论成功失败，都设置loading为false
         this.loading = false
       }
+    },
+    
+    // 生成xlsx表格
+    async generateXlsx() {
+      if (!this.isLoggedIn) {
+        alert('请先登录')
+        return
+      }
+      
+      if (!this.selectedCommunicationId) {
+        alert('请先选择一个对话')
+        return
+      }
+      
+      if (!this.messageInput.trim() && this.stagedFiles.length === 0) {
+        alert('请输入要分析的内容或上传文件')
+        return
+      }
+      
+      this.loading = true
+      
+      try {
+        const formData = new FormData()
+        formData.append('communicationId', this.selectedCommunicationId)
+        formData.append('content', this.messageInput)
+        
+        for (let i = 0; i < this.stagedFiles.length; i++) {
+          const file = this.stagedFiles[i]
+          if (file.url && !(file instanceof File)) {
+            try {
+              const response = await fetch(`http://localhost:8081${file.url}`)
+              const blob = await response.blob()
+              const fileObject = new File([blob], file.name)
+              formData.append('files', fileObject)
+            } catch (error) {
+              console.error('下载文件失败:', error)
+              alert('下载文件失败: ' + error.message)
+              return
+            }
+          } else {
+            formData.append('files', file)
+          }
+        }
+        
+        await axios.post('http://localhost:8081/api/messages/generate-xlsx', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+        
+        alert('表格生成成功，请在对话中查看下载链接')
+        
+        this.messageInput = ''
+        this.stagedFiles = []
+        
+        await this.fetchMessages(this.selectedCommunicationId)
+      } catch (error) {
+        console.error('生成表格失败:', error)
+        alert('生成表格失败: ' + error.message)
+      } finally {
+        this.loading = false
+      }
     }
   },
   mounted() {
@@ -887,7 +950,7 @@ export default {
   bottom: 50px;
   left: 100px;
   right: 100px;
-  height: 150px;
+  height: 200px;
   background-color: white;
   border: 2px solid black;
   border-radius: 8px;
