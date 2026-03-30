@@ -1,9 +1,5 @@
 <template>
   <div id="app">
-    <nav>
-      <router-link to="/">首页</router-link> |
-      <router-link to="/users">用户管理</router-link>
-    </nav>
     <router-view />
   </div>
 </template>

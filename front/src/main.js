@@ -1,14 +1,14 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import { createRouter, createWebHistory } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
 import UserManager from './components/UserManager.vue'
+import WorkManager from './components/WorkManager.vue'
 
 const routes = [
   {
     path: '/',
     name: 'Home',
-    component: HelloWorld
+    component: WorkManager
   },
   {
     path: '/users',

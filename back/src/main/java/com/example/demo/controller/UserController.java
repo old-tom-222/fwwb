@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -44,9 +45,11 @@ public class UserController {
         return userRepository.save(user);
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "删除用户", description = "根据用户ID删除用户记录")
-    public void deleteUser(@PathVariable String id) {
-        userRepository.deleteById(id);
+    @PostMapping("/login")
+    @Operation(summary = "用户登录", description = "根据账号和密码验证用户，返回用户信息")
+    public User login(@RequestBody Map<String, String> credentials) {
+        String account = credentials.get("account");
+        String password = credentials.get("password");
+        return userRepository.findByAccountAndPassword(account, password).orElse(null);
     }
 }

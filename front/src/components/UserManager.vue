@@ -7,6 +7,7 @@
     <div v-else>
       <div v-for="user in users" :key="user.id" class="user-card">
         <h3>账号: {{ user.account }}</h3>
+        <p>姓名: {{ user.name || '未填写' }}</p>
         <p>创建时间: {{ user.create_at }}</p>
       </div>
       <div v-if="users.length === 0">暂无用户数据</div>
@@ -16,6 +17,10 @@
       <div>
         <label>账号:</label>
         <input v-model="newUser.account" type="text" required>
+      </div>
+      <div>
+        <label>姓名:</label>
+        <input v-model="newUser.name" type="text" required>
       </div>
       <div>
         <label>密码:</label>
@@ -38,6 +43,7 @@ export default {
       error: null,
       newUser: {
         account: '',
+        name: '',
         password: ''
       }
     }
@@ -76,6 +82,7 @@ export default {
     resetForm() {
       this.newUser = {
         account: '',
+        name: '',
         password: ''
       }
     }
