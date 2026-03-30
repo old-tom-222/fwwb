@@ -2,7 +2,7 @@
   <div class="work-manager">
     <nav class="sidebar">
       <h2>智能文档处理助手</h2>
-      <button class="new-chat-btn">云仓库</button>
+      <button class="new-chat-btn" @click="openRepositoryModal">云仓库</button>
       <button class="new-chat-btn" @click="createNewCommunication">新对话</button>
       <div class="divider"></div>
       <h3 class="history-title">历史对话</h3>
@@ -147,6 +147,33 @@
           </div>
         </div>
       </div>
+      
+      <!-- 云仓库弹窗 -->
+      <div v-if="showRepositoryModal" class="modal-overlay" @click="showRepositoryModal = false">
+        <div class="repository-modal-content" @click.stop>
+          <h2>云仓库</h2>
+          <div class="repository-content">
+            <div class="file-list">
+              <div v-if="repositoryFiles.length > 0" class="files">
+                <div v-for="file in repositoryFiles" :key="file.id" class="file-item">
+                  <span class="file-name">{{ file.name }}</span>
+                  <div class="file-actions">
+                    <button class="view-btn" @click="viewFile(file)">查看</button>
+                    <button class="add-btn" @click="addFileToStaged(file)">放入提问暂存区</button>
+                    <button class="delete-btn" @click="deleteRepositoryFile(file.id)">删除</button>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="no-files">暂无文件</div>
+            </div>
+            <div class="repository-actions">
+              <input ref="repositoryFileInput" type="file" multiple style="display: none" @change="handleRepositoryFileInput" accept=".docx,.md,.xlsx,.txt">
+              <button class="import-btn" @click="triggerRepositoryFileInput">导入文件</button>
+              <button class="return-btn" @click="showRepositoryModal = false">返回</button>
+            </div>
+          </div>
+        </div>
+      </div>
   </div>
 </template>
 
@@ -163,6 +190,8 @@ export default {
       showLoginModal: false,
       showRenameModal: false, // 重命名模态框显示状态
       showDeleteModal: false, // 删除模态框显示状态
+      showRepositoryModal: false, // 云仓库弹窗显示状态
+      repositoryFiles: [], // 云仓库文件列表
       loginForm: {
         account: '',
         password: ''
@@ -351,7 +380,24 @@ export default {
         
         // 添加暂存的文件
         for (let i = 0; i < this.stagedFiles.length; i++) {
-          formData.append('files', this.stagedFiles[i])
+          const file = this.stagedFiles[i]
+          // 检查是否是从云仓库添加的文件（只有name和url属性）
+          if (file.url && !(file instanceof File)) {
+            // 对于云仓库文件，我们需要先下载文件，然后再上传
+            try {
+              const response = await fetch(`http://localhost:8081${file.url}`)
+              const blob = await response.blob()
+              const fileObject = new File([blob], file.name)
+              formData.append('files', fileObject)
+            } catch (error) {
+              console.error('下载文件失败:', error)
+              alert('下载文件失败: ' + error.message)
+              return
+            }
+          } else {
+            // 对于本地文件，直接添加
+            formData.append('files', file)
+          }
         }
         
         // 调用后端聊天接口
@@ -485,6 +531,123 @@ export default {
     // 切换输入区域的显示和隐藏
     toggleInputArea() {
       this.inputAreaVisible = !this.inputAreaVisible
+    },
+    
+    // 打开云仓库弹窗
+    async openRepositoryModal() {
+      if (!this.isLoggedIn) {
+        alert('请先登录')
+        return
+      }
+      
+      try {
+        // 获取用户文件列表
+        const response = await axios.get(`http://localhost:8081/api/repository/user/${this.userId}`)
+        this.repositoryFiles = response.data
+      } catch (error) {
+        console.error('获取文件列表失败:', error)
+        alert('获取文件列表失败: ' + error.message)
+      }
+      
+      this.showRepositoryModal = true
+    },
+    
+    // 触发云仓库文件选择对话框
+    triggerRepositoryFileInput() {
+      this.$refs.repositoryFileInput.click()
+    },
+    
+    // 处理云仓库文件选择
+    async handleRepositoryFileInput(event) {
+      const files = event.target.files
+      if (files.length === 0) return
+      
+      // 检查文件格式
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const extension = file.name.split('.').pop().toLowerCase()
+        if (!['docx', 'md', 'xlsx', 'txt'].includes(extension)) {
+          alert('只能导入docx、md、xlsx、txt格式的文件')
+          return
+        }
+      }
+      
+      // 上传文件
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const formData = new FormData()
+        formData.append('userId', this.userId)
+        formData.append('file', file)
+        
+        try {
+          await axios.post('http://localhost:8081/api/repository/upload', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+        } catch (error) {
+          console.error('上传文件失败:', error)
+          alert('上传文件失败: ' + error.message)
+        }
+      }
+      
+      // 重新获取文件列表
+      try {
+        const response = await axios.get(`http://localhost:8081/api/repository/user/${this.userId}`)
+        this.repositoryFiles = response.data
+      } catch (error) {
+        console.error('获取文件列表失败:', error)
+        alert('获取文件列表失败: ' + error.message)
+      }
+      
+      // 清空文件输入
+      event.target.value = ''
+    },
+    
+    // 查看文件
+    viewFile(file) {
+      // 直接打开文件URL
+      window.open(`http://localhost:8081${file.url}`, '_blank')
+    },
+    
+    // 将文件放入提问暂存区
+    addFileToStaged(file) {
+      // 检查暂存区文件数量
+      if (this.stagedFiles.length >= 5) {
+        alert('暂存区最多只能存储5个文件')
+        return
+      }
+      
+      // 检查文件是否已经在暂存区
+      const isFileExist = this.stagedFiles.some(stagedFile => stagedFile.name === file.name)
+      if (isFileExist) {
+        alert('该文件已在暂存区中')
+        return
+      }
+      
+      // 创建文件对象并添加到暂存区
+      const fileObject = {
+        name: file.name,
+        url: file.url
+      }
+      this.stagedFiles.push(fileObject)
+      alert('文件已添加到暂存区')
+    },
+    
+    // 删除云仓库中的文件
+    async deleteRepositoryFile(fileId) {
+      if (confirm('确定要删除这个文件吗？')) {
+        try {
+          await axios.delete(`http://localhost:8081/api/repository/${fileId}`)
+          // 重新获取文件列表
+          const response = await axios.get(`http://localhost:8081/api/repository/user/${this.userId}`)
+          this.repositoryFiles = response.data
+          alert('文件删除成功')
+        } catch (error) {
+          console.error('删除文件失败:', error)
+          alert('删除文件失败: ' + error.message)
+        }
+      }
     }
   },
   mounted() {
@@ -917,6 +1080,130 @@ export default {
 
 .delete-btn:hover {
   background-color: #ffcdd2;
+}
+
+/* 云仓库弹窗样式 */
+.repository-modal-content {
+  width: 800px;
+  height: 500px;
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.repository-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.files {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.file-item {
+  padding: 10px;
+  background-color: #f4f4f4;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.file-name {
+  font-size: 14px;
+  flex: 1;
+}
+
+.file-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.view-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.view-btn:hover {
+  background-color: #bbdefb;
+}
+
+.add-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.add-btn:hover {
+  background-color: #c8e6c9;
+}
+
+.file-actions .delete-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.file-actions .delete-btn:hover {
+  background-color: #ffcdd2;
+}
+
+.repository-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.import-btn {
+  padding: 8px 16px;
+  background-color: #3c8cdc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.import-btn:hover {
+  background-color: #2c3e50;
+}
+
+.return-btn {
+  padding: 8px 16px;
+  background-color: #f4f4f4;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.return-btn:hover {
+  background-color: #e0e0e0;
 }
 
 .communication-item:hover {
