@@ -12,9 +12,14 @@
           :key="comm.id"
           class="communication-item"
           :class="{ active: selectedCommunicationId === comm.id }"
-          @click="selectCommunication(comm.id)"
         >
-          {{ comm.name }}
+          <div class="communication-name" @click="selectCommunication(comm.id)">
+            {{ comm.name }}
+          </div>
+          <div class="communication-actions">
+              <button class="rename-btn" @click.stop="openRenameModal(comm.id, comm.name)">重命名</button>
+              <button class="delete-btn" @click.stop="openDeleteModal(comm.id, comm.name)">删除</button>
+            </div>
         </div>
       </div>
       <div v-else-if="isLoggedIn" class="no-communications">
@@ -50,14 +55,51 @@
             <div class="message-time">{{ formatTime(message.createdAt) }}</div>
           </div>
         </div>
-        <div class="input-area">
-          <textarea 
-            class="chat-input" 
-            placeholder="输入消息..."
-            v-model="messageInput"
-            @keyup.enter.ctrl="sendMessage"
-          ></textarea>
-          <button class="send-btn" @click="sendMessage">发送</button>
+        <div v-if="inputAreaVisible" class="input-area">
+          <!-- 文件暂存区 -->
+          <div class="file-staging-area">
+            <div class="file-staging-header">
+              <span>文件暂存区</span>
+              <button class="import-btn" @click="triggerFileInput">导入文件</button>
+            </div>
+            <div class="file-list">
+              <div v-for="(file, index) in stagedFiles" :key="index" class="file-item">
+                <span class="file-name">{{ file.name }}</span>
+                <button class="remove-btn" @click="removeFile(index)">删除</button>
+              </div>
+              <div v-if="stagedFiles.length === 0" class="no-files">
+                暂无文件
+              </div>
+            </div>
+          </div>
+          <!-- 隐藏的文件输入元素 -->
+          <input 
+            ref="fileInput" 
+            type="file" 
+            multiple 
+            style="display: none" 
+            @change="handleFileInput"
+            accept=".docx,.md,.xlsx,.txt"
+          />
+          <!-- 聊天输入区域 -->
+          <div class="chat-input-container">
+            <textarea 
+              class="chat-input" 
+              placeholder="输入消息..."
+              v-model="messageInput"
+              @keyup.enter.ctrl="sendMessage"
+              :disabled="loading"
+            ></textarea>
+            <div v-if="loading" class="loading-overlay">
+              正在思考中...
+            </div>
+            <button class="send-btn" @click="sendMessage" :disabled="loading">发送</button>
+            <button class="hide-btn" @click="toggleInputArea" :disabled="loading">隐藏</button>
+          </div>
+        </div>
+        <!-- 显示按钮 -->
+        <div v-if="!inputAreaVisible" class="show-input-btn">
+          <button class="show-btn" @click="toggleInputArea">显示</button>
         </div>
       </div>
     </main>
@@ -79,6 +121,32 @@
         </form>
       </div>
     </div>
+    <!-- 重命名模态框 -->
+      <div v-if="showRenameModal" class="modal-overlay" @click="showRenameModal = false">
+        <div class="modal-content" @click.stop>
+          <h2>重命名对话</h2>
+          <form @submit.prevent="renameCommunication">
+            <div>
+              <label>对话名称:</label>
+              <input v-model="renameForm.name" type="text" required>
+            </div>
+            <button type="submit">确认</button>
+            <button type="button" @click="showRenameModal = false">取消</button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- 删除模态框 -->
+      <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
+        <div class="modal-content" @click.stop>
+          <h2>删除对话</h2>
+          <p>确定要删除对话 "{{ deleteForm.name }}" 吗？</p>
+          <div class="modal-actions">
+            <button @click="deleteCommunication">确认删除</button>
+            <button @click="showDeleteModal = false">取消</button>
+          </div>
+        </div>
+      </div>
   </div>
 </template>
 
@@ -93,15 +161,29 @@ export default {
       userName: '',
       userId: '', // 添加：用户 ID
       showLoginModal: false,
+      showRenameModal: false, // 重命名模态框显示状态
+      showDeleteModal: false, // 删除模态框显示状态
       loginForm: {
         account: '',
         password: ''
+      },
+      renameForm: {
+        id: '', // 要重命名的对话ID
+        name: '' // 新名称
+      },
+      deleteForm: {
+        id: '', // 要删除的对话ID
+        name: '' // 要删除的对话名称
       },
       communications: [], // 对话列表
       selectedCommunicationId: null, // 当前选中的对话ID
       selectedCommunicationName: '', // 当前选中的对话名称
       messages: [], // 消息列表
-      messageInput: '' // 消息输入框内容
+      messageInput: '', // 消息输入框内容
+      stagedFiles: [], // 暂存的文件列表
+      fileInput: null, // 文件输入元素引用
+      inputAreaVisible: true, // 输入区域是否可见
+      loading: false // 是否正在加载AI回复
     }
   },
   computed: {
@@ -254,28 +336,155 @@ export default {
         return
       }
       
-      if (!this.messageInput.trim()) {
+      if (!this.messageInput.trim() && this.stagedFiles.length === 0) {
         return
       }
       
+      // 设置loading状态
+      this.loading = true
+      
       try {
-        const requestData = {
-          communicationId: this.selectedCommunicationId,
-          content: this.messageInput
+        // 创建FormData对象
+        const formData = new FormData()
+        formData.append('communicationId', this.selectedCommunicationId)
+        formData.append('content', this.messageInput)
+        
+        // 添加暂存的文件
+        for (let i = 0; i < this.stagedFiles.length; i++) {
+          formData.append('files', this.stagedFiles[i])
         }
         
         // 调用后端聊天接口
-        await axios.post('http://localhost:8081/api/messages/chat', requestData)
+        await axios.post('http://localhost:8081/api/messages/chat', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
         
         // 清空输入框
         this.messageInput = ''
+        // 清空暂存的文件
+        this.stagedFiles = []
         
         // 重新获取消息列表
         await this.fetchMessages(this.selectedCommunicationId)
       } catch (error) {
         console.error('发送消息失败:', error)
         alert('发送消息失败: ' + error.message)
+      } finally {
+        // 无论成功失败，都设置loading为false
+        this.loading = false
       }
+    },
+    
+    // 显示重命名模态框
+    openRenameModal(communicationId, currentName) {
+      this.renameForm.id = communicationId
+      this.renameForm.name = currentName
+      this.showRenameModal = true
+    },
+    
+    // 显示删除模态框
+    openDeleteModal(communicationId, currentName) {
+      this.deleteForm.id = communicationId
+      this.deleteForm.name = currentName
+      this.showDeleteModal = true
+    },
+    
+    // 提交重命名请求
+    async renameCommunication() {
+      if (!this.renameForm.name.trim()) {
+        alert('请输入对话名称')
+        return
+      }
+      
+      try {
+        // 调用后端更新对话名称的API
+        await axios.put(`http://localhost:8081/api/communications/${this.renameForm.id}`, {
+          name: this.renameForm.name
+        })
+        
+        // 关闭模态框
+        this.showRenameModal = false
+        
+        // 重新获取对话列表
+        await this.fetchCommunications()
+        
+        // 如果当前选中的对话就是被重命名的对话，更新选中对话的名称
+        if (this.selectedCommunicationId === this.renameForm.id) {
+          this.selectedCommunicationName = this.renameForm.name
+        }
+      } catch (error) {
+        console.error('重命名对话失败:', error)
+        alert('重命名对话失败: ' + error.message)
+      }
+    },
+    
+    // 提交删除请求
+    async deleteCommunication() {
+      try {
+        // 调用后端删除对话的API
+        await axios.delete(`http://localhost:8081/api/communications/${this.deleteForm.id}`)
+        
+        // 关闭模态框
+        this.showDeleteModal = false
+        
+        // 重新获取对话列表
+        await this.fetchCommunications()
+        
+        // 如果当前选中的对话就是被删除的对话，清空选中状态和消息列表
+        if (this.selectedCommunicationId === this.deleteForm.id) {
+          this.selectedCommunicationId = null
+          this.selectedCommunicationName = ''
+          this.messages = []
+        }
+      } catch (error) {
+        console.error('删除对话失败:', error)
+        alert('删除对话失败: ' + error.message)
+      }
+    },
+    
+    // 触发文件选择对话框
+    triggerFileInput() {
+      this.$refs.fileInput.click()
+    },
+    
+    // 处理文件选择
+    handleFileInput(event) {
+      const files = event.target.files
+      if (files.length === 0) return
+      
+      // 检查文件数量
+      if (this.stagedFiles.length + files.length > 5) {
+        alert('最多只能暂存5个文件')
+        return
+      }
+      
+      // 检查文件格式
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const extension = file.name.split('.').pop().toLowerCase()
+        if (!['docx', 'md', 'xlsx', 'txt'].includes(extension)) {
+          alert('只能导入docx、md、xlsx、txt格式的文件')
+          return
+        }
+        
+        // 添加文件到暂存区
+        this.stagedFiles.push(file)
+      }
+      
+      // 清空文件输入
+      event.target.value = ''
+    },
+    
+    // 删除暂存的文件
+    removeFile(index) {
+      this.stagedFiles.splice(index, 1)
+    },
+    
+    // 切换输入区域的显示和隐藏
+    toggleInputArea() {
+      this.inputAreaVisible = !this.inputAreaVisible
     }
   },
   mounted() {
@@ -395,7 +604,7 @@ export default {
   bottom: 50px;
   left: 100px;
   right: 100px;
-  height: 80px;
+  height: 150px;
   background-color: white;
   border: 2px solid black;
   border-radius: 8px;
@@ -403,7 +612,87 @@ export default {
   box-sizing: border-box;
   overflow-y: hidden;
   display: flex;
+  flex-direction: column;
+}
+
+/* 文件暂存区样式 */
+.file-staging-area {
+  background-color: #f4f4f4;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.file-staging-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.import-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  background-color: #3c8cdc;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.import-btn:hover {
+  background-color: #2c3e50;
+}
+
+.file-list {
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+  font-size: 14px;
+}
+
+.file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-btn {
+  padding: 1px 4px;
+  font-size: 10px;
+  background-color: #e0e0e0;
+  color: #333;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.remove-btn:hover {
+  background-color: #d0d0d0;
+}
+
+.no-files {
+  font-style: italic;
+  color: #666;
+  font-size: 14px;
+}
+
+/* 聊天输入区域样式 */
+.chat-input-container {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  position: relative;
 }
 
 .chat-input {
@@ -413,7 +702,25 @@ export default {
   outline: none;
   resize: none;
   font-size: 16px;
-  line-height: 1;
+  line-height: 1.5;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+/* 加载中覆盖层样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #666;
+  z-index: 10;
 }
 
 .send-btn {
@@ -424,10 +731,57 @@ export default {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  height: 100%;
+  height: 80%;
 }
 
 .send-btn:hover {
+  background-color: #2c3e50;
+}
+
+.send-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.hide-btn {
+  margin-left: 10px;
+  padding: 10px 20px;
+  background-color: #3c8cdc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  height: 80%;
+}
+
+.hide-btn:hover {
+  background-color: #2c3e50;
+}
+
+.hide-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* 显示按钮样式 */
+.show-input-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.show-btn {
+  padding: 10px 20px;
+  background-color: #3c8cdc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.show-btn:hover {
   background-color: #2c3e50;
 }
 
@@ -518,6 +872,51 @@ export default {
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.communication-name {
+  flex: 1;
+  cursor: pointer;
+}
+
+.communication-actions {
+  display: none;
+}
+
+.communication-item:hover .communication-actions {
+  display: block;
+}
+
+.rename-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  background-color: #f4f4f4;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-right: 5px;
+}
+
+.rename-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.delete-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background-color: #ffcdd2;
 }
 
 .communication-item:hover {

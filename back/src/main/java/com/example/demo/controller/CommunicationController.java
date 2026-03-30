@@ -7,7 +7,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/communications")
@@ -43,8 +45,24 @@ public class CommunicationController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新对话", description = "根据对话ID更新对话信息，返回更新后的对话对象")
-    public Communication updateCommunication(@PathVariable String id, @RequestBody Communication communication) {
-        communication.setId(id);
+    public Communication updateCommunication(@PathVariable String id, @RequestBody Map<String, Object> updates) {
+        // 先从数据库中获取现有的对话对象
+        Communication communication = communicationRepository.findById(id).orElse(null);
+        if (communication == null) {
+            return null;
+        }
+        
+        // 只更新提供的字段
+        if (updates.containsKey("name")) {
+            communication.setName((String) updates.get("name"));
+        }
+        if (updates.containsKey("userId")) {
+            communication.setUserId((String) updates.get("userId"));
+        }
+        if (updates.containsKey("createdAt")) {
+            communication.setCreatedAt(new Date((long) updates.get("createdAt")));
+        }
+        
         return communicationRepository.save(communication);
     }
 

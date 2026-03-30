@@ -3,11 +3,14 @@ package com.example.demo.controller;
 import com.example.demo.model.Message;
 import com.example.demo.repository.MessageRepository;
 import com.example.demo.service.ZhipuAIService;
+import com.example.demo.util.FileParser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -48,9 +51,25 @@ public class MessageController {
 
     @PostMapping("/chat")
     @Operation(summary = "聊天接口", description = "处理用户聊天请求，返回AI回复")
-    public Message chat(@RequestBody Map<String, String> request) {
-        String communicationId = request.get("communicationId");
-        String content = request.get("content");
+    public Message chat(@RequestParam("communicationId") String communicationId,
+                       @RequestParam("content") String content,
+                       @RequestParam(value = "files", required = false) MultipartFile[] files) {
+        // 处理上传的文件
+        List<String> fileContents = new ArrayList<>();
+        if (files != null && files.length > 0) {
+            for (MultipartFile file : files) {
+                // 这里可以处理文件，例如保存到服务器或解析文件内容
+                System.out.println("上传的文件: " + file.getOriginalFilename());
+                try {
+                    // 解析文件内容
+                    String fileContent = FileParser.parseFile(file.getOriginalFilename(), file.getInputStream());
+                    fileContents.add(fileContent);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                // 可以将文件内容添加到content中，或者在调用AI API时一并发送
+            }
+        }
         
         // 保存用户消息（status=1）
         Message userMessage = new Message();
@@ -60,8 +79,8 @@ public class MessageController {
         userMessage.setCreatedAt(new java.util.Date());
         messageRepository.save(userMessage);
         
-        // 调用智谱API获取AI回复
-        String aiResponse = zhipuAIService.chat(content);
+        // 调用智谱API获取AI回复，传递文件内容
+        String aiResponse = zhipuAIService.chat(content, fileContents);
         
         // 保存AI回复（status=0）
         Message aiMessage = new Message();

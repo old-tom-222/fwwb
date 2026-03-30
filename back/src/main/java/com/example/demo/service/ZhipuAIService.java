@@ -21,8 +21,22 @@ public class ZhipuAIService {
         this.restTemplate = new RestTemplate();
     }
 
-    public String chat(String userMessage) {
+    public String chat(String userMessage, List<String> fileContents) {
         try {
+            // 构建消息内容，包含文件内容
+            StringBuilder messageContent = new StringBuilder();
+            messageContent.append("使用中文回答\n");
+            messageContent.append(userMessage);
+            
+            // 添加文件内容
+            if (fileContents != null && !fileContents.isEmpty()) {
+                messageContent.append("\n\n以下是上传的文件内容：\n");
+                for (int i = 0; i < fileContents.size(); i++) {
+                    messageContent.append("文件").append(i + 1).append(":\n");
+                    messageContent.append(fileContents.get(i)).append("\n\n");
+                }
+            }
+
             // 设置请求头
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + API_KEY);
@@ -32,7 +46,7 @@ public class ZhipuAIService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", "glm-4");
             requestBody.put("messages", List.of(
-                Map.of("role", "user", "content", "使用中文回答\n" + userMessage)
+                Map.of("role", "user", "content", messageContent.toString())
             ));
             requestBody.put("temperature", 0.7);
             requestBody.put("max_tokens", 1000);
@@ -62,5 +76,10 @@ public class ZhipuAIService {
             e.printStackTrace();
         }
         return "抱歉，我现在无法回答你的问题，请稍后再试。";
+    }
+    
+    // 重载方法，保持向后兼容
+    public String chat(String userMessage) {
+        return chat(userMessage, null);
     }
 }

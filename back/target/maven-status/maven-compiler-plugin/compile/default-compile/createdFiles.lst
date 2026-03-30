@@ -1,3 +1,4 @@
+com\example\demo\util\FileParser.class
 com\example\demo\controller\MessageController.class
 com\example\demo\model\User.class
 com\example\demo\repository\UserRepository.class
