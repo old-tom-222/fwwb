@@ -2,8 +2,8 @@
   <div class="work-manager">
     <nav class="sidebar">
       <h2>智能文档处理助手</h2>
-      <button class="new-chat-btn" @click="openRepositoryModal">云仓库</button>
-      <button class="new-chat-btn" @click="createNewCommunication">新对话</button>
+      <button class="new-chat-btn secondary-btn" @click="openRepositoryModal">云仓库</button>
+      <button class="new-chat-btn secondary-btn" @click="createNewCommunication">新对话</button>
       <div class="divider"></div>
       <h3 class="history-title">历史对话</h3>
       <div v-if="isLoggedIn && communications.length > 0" class="communication-list">
@@ -17,8 +17,8 @@
             {{ comm.name }}
           </div>
           <div class="communication-actions">
-              <button class="rename-btn" @click.stop="openRenameModal(comm.id, comm.name)">重命名</button>
-              <button class="delete-btn" @click.stop="openDeleteModal(comm.id, comm.name)">删除</button>
+              <button class="rename-btn small-btn" @click.stop="openRenameModal(comm.id, comm.name)">重命名</button>
+              <button class="delete-btn small-btn" @click.stop="openDeleteModal(comm.id, comm.name)">删除</button>
             </div>
         </div>
       </div>
@@ -29,10 +29,10 @@
         <div v-if="isLoggedIn">
           <p>欢迎, {{ userName }}</p>
           <p class="user-id">ID: {{ userId }}</p>
-          <button @click="logout" class="logout-btn">退出登录</button>
+          <button @click="logout" class="logout-btn secondary-btn">退出登录</button>
         </div>
         <div v-else>
-          <button @click="showLoginModal = true" class="login-btn">登录</button>
+          <button @click="showLoginModal = true" class="login-btn main-btn">登录</button>
         </div>
       </div>
     </nav>
@@ -51,7 +51,7 @@
             class="message"
             :class="{ 'status-1': message.status === 1 }"
           >
-            <div class="message-content">{{ message.content }}</div>
+            <div class="message-content" v-html="message.content"></div>
             <div class="message-time">{{ formatTime(message.createdAt) }}</div>
           </div>
         </div>
@@ -60,12 +60,12 @@
           <div class="file-staging-area">
             <div class="file-staging-header">
               <span>文件暂存区</span>
-              <button class="import-btn" @click="triggerFileInput">导入文件</button>
+              <button class="import-btn main-btn" @click="triggerFileInput">导入文件</button>
             </div>
             <div class="file-list">
               <div v-for="(file, index) in stagedFiles" :key="index" class="file-item">
                 <span class="file-name">{{ file.name }}</span>
-                <button class="remove-btn" @click="removeFile(index)">删除</button>
+                <button class="remove-btn small-btn" @click="removeFile(index)">删除</button>
               </div>
               <div v-if="stagedFiles.length === 0" class="no-files">
                 暂无文件
@@ -93,13 +93,14 @@
             <div v-if="loading" class="loading-overlay">
               正在思考中...
             </div>
-            <button class="send-btn" @click="sendMessage" :disabled="loading">发送</button>
-            <button class="hide-btn" @click="toggleInputArea" :disabled="loading">隐藏</button>
+            <button class="send-btn main-btn" @click="sendMessage" :disabled="loading">发送</button>
+            <button class="docx-btn main-btn" @click="generateDocx" :disabled="loading">docx</button>
+            <button class="hide-btn main-btn" @click="toggleInputArea" :disabled="loading">隐藏</button>
           </div>
         </div>
         <!-- 显示按钮 -->
         <div v-if="!inputAreaVisible" class="show-input-btn">
-          <button class="show-btn" @click="toggleInputArea">显示</button>
+          <button class="show-btn main-btn" @click="toggleInputArea">显示</button>
         </div>
       </div>
     </main>
@@ -158,9 +159,9 @@
                 <div v-for="file in repositoryFiles" :key="file.id" class="file-item">
                   <span class="file-name">{{ file.name }}</span>
                   <div class="file-actions">
-                    <button class="view-btn" @click="viewFile(file)">查看</button>
-                    <button class="add-btn" @click="addFileToStaged(file)">放入提问暂存区</button>
-                    <button class="delete-btn" @click="deleteRepositoryFile(file.id)">删除</button>
+                    <button class="view-btn small-btn" @click="viewFile(file)">查看</button>
+                    <button class="add-btn small-btn" @click="addFileToStaged(file)">放入提问暂存区</button>
+                    <button class="delete-btn small-btn" @click="deleteRepositoryFile(file.id)">删除</button>
                   </div>
                 </div>
               </div>
@@ -168,8 +169,8 @@
             </div>
             <div class="repository-actions">
               <input ref="repositoryFileInput" type="file" multiple style="display: none" @change="handleRepositoryFileInput" accept=".docx,.md,.xlsx,.txt">
-              <button class="import-btn" @click="triggerRepositoryFileInput">导入文件</button>
-              <button class="return-btn" @click="showRepositoryModal = false">返回</button>
+              <button class="import-btn main-btn" @click="triggerRepositoryFileInput">导入文件</button>
+              <button class="return-btn secondary-btn" @click="showRepositoryModal = false">返回</button>
             </div>
           </div>
         </div>
@@ -648,6 +649,80 @@ export default {
           alert('删除文件失败: ' + error.message)
         }
       }
+    },
+    
+    // 生成docx文档
+    async generateDocx() {
+      if (!this.isLoggedIn) {
+        alert('请先登录')
+        return
+      }
+      
+      if (!this.selectedCommunicationId) {
+        alert('请先选择一个对话')
+        return
+      }
+      
+      if (!this.messageInput.trim() && this.stagedFiles.length === 0) {
+        alert('请输入要分析的内容或上传文件')
+        return
+      }
+      
+      // 设置loading状态
+      this.loading = true
+      
+      try {
+        // 创建FormData对象
+        const formData = new FormData()
+        formData.append('communicationId', this.selectedCommunicationId)
+        formData.append('content', this.messageInput)
+        
+        // 添加暂存的文件
+        for (let i = 0; i < this.stagedFiles.length; i++) {
+          const file = this.stagedFiles[i]
+          // 检查是否是从云仓库添加的文件（只有name和url属性）
+          if (file.url && !(file instanceof File)) {
+            // 对于云仓库文件，我们需要先下载文件，然后再上传
+            try {
+              const response = await fetch(`http://localhost:8081${file.url}`)
+              const blob = await response.blob()
+              const fileObject = new File([blob], file.name)
+              formData.append('files', fileObject)
+            } catch (error) {
+              console.error('下载文件失败:', error)
+              alert('下载文件失败: ' + error.message)
+              return
+            }
+          } else {
+            // 对于本地文件，直接添加
+            formData.append('files', file)
+          }
+        }
+        
+        // 调用后端生成docx文档的API
+        await axios.post('http://localhost:8081/api/messages/generate-docx', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+        
+        // 显示成功消息
+        alert('文档生成成功，请在对话中查看下载链接')
+        
+        // 清空输入框
+        this.messageInput = ''
+        // 清空暂存的文件
+        this.stagedFiles = []
+        
+        // 重新获取消息列表
+        await this.fetchMessages(this.selectedCommunicationId)
+      } catch (error) {
+        console.error('生成文档失败:', error)
+        alert('生成文档失败: ' + error.message)
+      } finally {
+        // 无论成功失败，都设置loading为false
+        this.loading = false
+      }
     }
   },
   mounted() {
@@ -658,6 +733,51 @@ export default {
 </script>
 
 <style scoped>
+/* 通用按钮样式 */
+.main-btn {
+  padding: 10px 20px;
+  background-color: #3c8cdc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.main-btn:hover {
+  background-color: #2c3e50;
+}
+
+.main-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  padding: 10px 20px;
+  background-color: #f4f4f4;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.secondary-btn:hover {
+  background-color: #d0d0d0;
+}
+
+.small-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
 .work-manager {
   display: flex;
   min-height: 80vh;
@@ -799,15 +919,7 @@ export default {
 .import-btn {
   padding: 2px 6px;
   font-size: 12px;
-  background-color: #3c8cdc;
-  color: white;
-  border: none;
   border-radius: 3px;
-  cursor: pointer;
-}
-
-.import-btn:hover {
-  background-color: #2c3e50;
 }
 
 .file-list {
@@ -888,42 +1000,12 @@ export default {
 
 .send-btn {
   margin-left: 10px;
-  padding: 10px 20px;
-  background-color: #3c8cdc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
   height: 80%;
-}
-
-.send-btn:hover {
-  background-color: #2c3e50;
-}
-
-.send-btn:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
 }
 
 .hide-btn {
   margin-left: 10px;
-  padding: 10px 20px;
-  background-color: #3c8cdc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
   height: 80%;
-}
-
-.hide-btn:hover {
-  background-color: #2c3e50;
-}
-
-.hide-btn:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
 }
 
 /* 显示按钮样式 */
@@ -935,17 +1017,7 @@ export default {
 }
 
 .show-btn {
-  padding: 10px 20px;
-  background-color: #3c8cdc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.show-btn:hover {
-  background-color: #2c3e50;
 }
 
 .login-status {
@@ -961,30 +1033,12 @@ export default {
 .login-btn {
   width: 100%;
   padding: 10px;
-  background-color: #3c8cdc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.login-btn:hover {
-  background-color: #2c3e50;
 }
 
 .logout-btn {
   width: 100%;
   padding: 10px;
-  background-color: #e0e0e0;
-  color: #333;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
   margin-top: 10px;
-}
-
-.logout-btn:hover {
-  background-color: #d0d0d0;
 }
 
 .user-id {
@@ -996,18 +1050,9 @@ export default {
 .new-chat-btn {
   width: 100%;
   padding: 10px;
-  background-color: #f4f4f4;
-  color: #333;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
   margin-bottom: 0px;
   font-weight: bold;
   font-size: 16px;
-}
-
-.new-chat-btn:hover {
-  background-color: #d0d0d0;
 }
 
 .divider {
@@ -1054,13 +1099,8 @@ export default {
 }
 
 .rename-btn {
-  padding: 2px 6px;
-  font-size: 12px;
   background-color: #f4f4f4;
   color: #333;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  cursor: pointer;
   margin-right: 5px;
 }
 
@@ -1069,13 +1109,9 @@ export default {
 }
 
 .delete-btn {
-  padding: 2px 6px;
-  font-size: 12px;
   background-color: #ffebee;
   color: #c62828;
-  border: 1px solid #ffcdd2;
-  border-radius: 3px;
-  cursor: pointer;
+  border-color: #ffcdd2;
 }
 
 .delete-btn:hover {
@@ -1131,13 +1167,9 @@ export default {
 }
 
 .view-btn {
-  padding: 2px 6px;
-  font-size: 12px;
   background-color: #e3f2fd;
   color: #1976d2;
-  border: 1px solid #bbdefb;
-  border-radius: 3px;
-  cursor: pointer;
+  border-color: #bbdefb;
 }
 
 .view-btn:hover {
@@ -1145,13 +1177,9 @@ export default {
 }
 
 .add-btn {
-  padding: 2px 6px;
-  font-size: 12px;
   background-color: #e8f5e8;
   color: #2e7d32;
-  border: 1px solid #c8e6c9;
-  border-radius: 3px;
-  cursor: pointer;
+  border-color: #c8e6c9;
 }
 
 .add-btn:hover {
@@ -1159,13 +1187,9 @@ export default {
 }
 
 .file-actions .delete-btn {
-  padding: 2px 6px;
-  font-size: 12px;
   background-color: #ffebee;
   color: #c62828;
-  border: 1px solid #ffcdd2;
-  border-radius: 3px;
-  cursor: pointer;
+  border-color: #ffcdd2;
 }
 
 .file-actions .delete-btn:hover {
@@ -1182,28 +1206,11 @@ export default {
 
 .import-btn {
   padding: 8px 16px;
-  background-color: #3c8cdc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.import-btn:hover {
-  background-color: #2c3e50;
 }
 
 .return-btn {
   padding: 8px 16px;
-  background-color: #f4f4f4;
-  color: #333;
   border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.return-btn:hover {
-  background-color: #e0e0e0;
 }
 
 .communication-item:hover {

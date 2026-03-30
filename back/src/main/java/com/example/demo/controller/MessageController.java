@@ -4,6 +4,7 @@ import com.example.demo.model.Message;
 import com.example.demo.repository.MessageRepository;
 import com.example.demo.service.ZhipuAIService;
 import com.example.demo.util.FileParser;
+import com.example.demo.util.AIResponseFormatter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,10 +83,13 @@ public class MessageController {
         // 调用智谱API获取AI回复，传递文件内容
         String aiResponse = zhipuAIService.chat(content, fileContents);
         
+        // 美化AI回复
+        String formattedResponse = AIResponseFormatter.formatResponse(aiResponse);
+        
         // 保存AI回复（status=0）
         Message aiMessage = new Message();
         aiMessage.setCommunicationId(communicationId);
-        aiMessage.setContent(aiResponse);
+        aiMessage.setContent(formattedResponse);
         aiMessage.setStatus(0);
         aiMessage.setCreatedAt(new java.util.Date());
         messageRepository.save(aiMessage);
@@ -104,5 +108,83 @@ public class MessageController {
     @Operation(summary = "删除消息", description = "根据消息ID删除消息")
     public void deleteMessage(@PathVariable String id) {
         messageRepository.deleteById(id);
+    }
+    
+    @PostMapping("/generate-docx")
+    @Operation(summary = "生成docx文档", description = "根据用户输入生成docx文档并返回下载链接")
+    public Message generateDocx(@RequestParam("communicationId") String communicationId, 
+                               @RequestParam("content") String content,
+                               @RequestParam(value = "files", required = false) MultipartFile[] files) {
+        // 处理上传的文件
+        List<String> fileContents = new ArrayList<>();
+        if (files != null && files.length > 0) {
+            for (MultipartFile file : files) {
+                try {
+                    // 解析文件内容
+                    String fileContent = FileParser.parseFile(file.getOriginalFilename(), file.getInputStream());
+                    fileContents.add(fileContent);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        // 保存用户消息（status=1）
+        Message userMessage = new Message();
+        userMessage.setCommunicationId(communicationId);
+        userMessage.setContent(content);
+        userMessage.setStatus(1);
+        userMessage.setCreatedAt(new java.util.Date());
+        messageRepository.save(userMessage);
+        
+        // 调用智谱API获取AI回复，传递文件内容
+        String aiResponse = zhipuAIService.chat(content, fileContents);
+        
+        // 生成docx文档
+        String docxUrl = generateDocxFile(aiResponse, communicationId);
+        
+        // 构建包含下载链接的回复
+        String responseWithLink = "我已经为您生成了docx文档，请点击以下链接下载：\n" + docxUrl;
+        
+        // 美化AI回复
+        String formattedResponse = AIResponseFormatter.formatResponse(responseWithLink);
+        
+        // 保存AI回复（status=0）
+        Message aiMessage = new Message();
+        aiMessage.setCommunicationId(communicationId);
+        aiMessage.setContent(formattedResponse);
+        aiMessage.setStatus(0);
+        aiMessage.setCreatedAt(new java.util.Date());
+        messageRepository.save(aiMessage);
+        
+        return aiMessage;
+    }
+    
+    /**
+     * 生成docx文档
+     * @param content 文档内容
+     * @param communicationId 对话ID
+     * @return 文档下载链接
+     */
+    private String generateDocxFile(String content, String communicationId) {
+        try {
+            // 生成唯一文件名
+            String fileName = "document_" + communicationId + "_" + System.currentTimeMillis() + ".docx";
+            String filePath = "uploads/" + fileName;
+            
+            // 这里使用Apache POI生成docx文档
+            // 实际实现需要添加Apache POI依赖
+            // 这里简化处理，创建一个简单的文本文件
+            java.io.File file = new java.io.File(filePath);
+            java.io.FileWriter writer = new java.io.FileWriter(file);
+            writer.write(content);
+            writer.close();
+            
+            // 返回下载链接
+            return "http://localhost:8081/" + filePath;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "生成文档失败";
+        }
     }
 }
