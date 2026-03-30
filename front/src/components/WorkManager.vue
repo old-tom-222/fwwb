@@ -1,10 +1,12 @@
 <template>
   <div class="work-manager">
     <nav class="sidebar">
-      <h2>导航</h2>
-      <ul>
+      <h2>智能文档处理助手</h2>
+      <button class="new-chat-btn">云仓库</button>
+      <button class="new-chat-btn">新对话</button>
+      <!-- <ul>
         <li><router-link to="/">工作管理</router-link></li>
-      </ul>
+      </ul> -->
       <div class="login-status">
         <div v-if="isLoggedIn">
           <p>欢迎, {{ userName }}</p>
@@ -15,8 +17,8 @@
       </div>
     </nav>
     <main class="content">
-      <h1>Work Manager</h1>
-      <p>这是工作管理页面</p>
+      <h1>{{ greeting }}</h1>
+      <!-- <p>这是工作管理页面</p> -->
     </main>
     <!-- 登录模态框 -->
     <div v-if="showLoginModal" class="modal-overlay" @click="showLoginModal = false">
@@ -53,6 +55,15 @@ export default {
         account: '',
         password: ''
       }
+    }
+  },
+  computed: {
+    greeting() {
+      const hour = new Date().getHours();
+      if (hour >= 7 && hour < 12) return '早上好，有什么我能帮到你吗？';
+      if (hour >= 12 && hour < 14) return '中午好，有什么我能帮到你吗？';
+      if (hour >= 14 && hour < 18) return '下午好，有什么我能帮到你吗？';
+      return '晚上好，有什么我能帮到你吗？';
     }
   },
   methods: {
@@ -119,11 +130,21 @@ export default {
 }
 
 .content {
-  margin-left: 250px;
-  padding: 20px;
-  min-height: 100vh;
-  overflow-y: auto;
+  position: absolute;
+  left: 285px;
+  top: 0;
+  right: 10px;
+  bottom: 0;
+  padding: 5px;
   text-align: center;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.content h1 {
+  margin-top: 40vh;
 }
 
 .login-status {
@@ -131,12 +152,14 @@ export default {
   bottom: 20px;
   left: 20px;
   right: 20px;
+  border-top: 1px solid #666;
+  padding-top: 20px;
 }
 
 .login-btn {
   width: 100%;
   padding: 10px;
-  background-color: #42b883;
+  background-color: #3c8cdc;
   color: white;
   border: none;
   border-radius: 4px;
@@ -145,6 +168,21 @@ export default {
 
 .login-btn:hover {
   background-color: #2c3e50;
+}
+
+.new-chat-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #f4f4f4;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.new-chat-btn:hover {
+  background-color: #d0d0d0;
 }
 
 .modal-overlay {
@@ -196,11 +234,11 @@ export default {
 }
 
 .modal-content button[type="submit"] {
-  background-color: #42b883;
+  background-color: #3c8cdc;
   color: white;
 }
 
 .modal-content button[type="button"] {
-  background-color: #ddd;
+  background-color: #999;
 }
 </style>
