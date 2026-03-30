@@ -10,14 +10,14 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends MongoRepository<Message, String> {
 
-    // 根据用户 ID 查询所有消息
-    List<Message> findByUserId(String userId);
+    // 根据对话 ID 查询所有消息
+    List<Message> findByCommunicationId(String communicationId);
 
-    // 根据用户 ID 和状态查询消息
-    List<Message> findByUserIdAndStatus(String userId, Integer status);
+    // 根据对话 ID 和状态查询消息
+    List<Message> findByCommunicationIdAndStatus(String communicationId, Integer status);
 
-    // 根据用户 ID 查询最新消息
-    List<Message> findByUserIdOrderByCreatedAtDesc(String userId);
+    // 根据对话 ID 查询最新消息
+    List<Message> findByCommunicationIdOrderByCreatedAtDesc(String communicationId);
 
     // 根据状态查询消息
     List<Message> findByStatus(Integer status);

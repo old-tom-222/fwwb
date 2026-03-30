@@ -1,5 +1,10 @@
+com\example\demo\controller\MessageController.class
 com\example\demo\model\User.class
 com\example\demo\repository\UserRepository.class
 com\example\demo\model\Message.class
+com\example\demo\model\Communication.class
+com\example\demo\service\ZhipuAIService.class
 com\example\demo\controller\UserController.class
+com\example\demo\controller\CommunicationController.class
 com\example\demo\repository\MessageRepository.class
+com\example\demo\repository\CommunicationRepository.class

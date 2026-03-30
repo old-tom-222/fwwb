@@ -3,12 +3,23 @@
     <nav class="sidebar">
       <h2>智能文档处理助手</h2>
       <button class="new-chat-btn">云仓库</button>
-      <button class="new-chat-btn">新对话</button>
+      <button class="new-chat-btn" @click="createNewCommunication">新对话</button>
       <div class="divider"></div>
       <h3 class="history-title">历史对话</h3>
-      <!-- <ul>
-        <li><router-link to="/">工作管理</router-link></li>
-      </ul> -->
+      <div v-if="isLoggedIn && communications.length > 0" class="communication-list">
+        <div 
+          v-for="comm in communications" 
+          :key="comm.id"
+          class="communication-item"
+          :class="{ active: selectedCommunicationId === comm.id }"
+          @click="selectCommunication(comm.id)"
+        >
+          {{ comm.name }}
+        </div>
+      </div>
+      <div v-else-if="isLoggedIn" class="no-communications">
+        暂无对话记录
+      </div>
       <div class="login-status">
         <div v-if="isLoggedIn">
           <p>欢迎, {{ userName }}</p>
@@ -21,10 +32,33 @@
       </div>
     </nav>
     <main class="content">
-      <h1>{{ greeting }}</h1>
-      <!-- <p>这是工作管理页面</p> -->
-      <div class="input-area">
-        <textarea class="chat-input" placeholder="输入消息..."></textarea>
+      <div v-if="!selectedCommunicationId" class="welcome">
+        <h1>{{ greeting }}</h1>
+      </div>
+      <div v-else class="chat-area">
+        <div class="chat-header">
+          <h2>{{ selectedCommunicationName }}</h2>
+        </div>
+        <div class="messages-container">
+          <div 
+            v-for="message in sortedMessages" 
+            :key="message.id"
+            class="message"
+            :class="{ 'status-1': message.status === 1 }"
+          >
+            <div class="message-content">{{ message.content }}</div>
+            <div class="message-time">{{ formatTime(message.createdAt) }}</div>
+          </div>
+        </div>
+        <div class="input-area">
+          <textarea 
+            class="chat-input" 
+            placeholder="输入消息..."
+            v-model="messageInput"
+            @keyup.enter.ctrl="sendMessage"
+          ></textarea>
+          <button class="send-btn" @click="sendMessage">发送</button>
+        </div>
       </div>
     </main>
     <!-- 登录模态框 -->
@@ -62,7 +96,12 @@ export default {
       loginForm: {
         account: '',
         password: ''
-      }
+      },
+      communications: [], // 对话列表
+      selectedCommunicationId: null, // 当前选中的对话ID
+      selectedCommunicationName: '', // 当前选中的对话名称
+      messages: [], // 消息列表
+      messageInput: '' // 消息输入框内容
     }
   },
   computed: {
@@ -72,6 +111,12 @@ export default {
       if (hour >= 12 && hour < 14) return '中午好，有什么我能帮到你吗？';
       if (hour >= 14 && hour < 18) return '下午好，有什么我能帮到你吗？';
       return '晚上好，有什么我能帮到你吗？';
+    },
+    sortedMessages() {
+      // 按创建时间排序，老的在上面，新的在下面
+      return [...this.messages].sort((a, b) => {
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      });
     }
   },
   methods: {
@@ -89,6 +134,9 @@ export default {
 
           this.showLoginModal = false
           this.loginForm = { account: '', password: '' }
+          
+          // 登录成功后获取用户的对话列表
+          this.fetchCommunications()
         } else {
           alert('登录失败：账号或密码错误')
         }
@@ -106,6 +154,9 @@ export default {
         this.isLoggedIn = true
         this.userId = savedUserId
         this.userName = savedUserName
+        
+        // 恢复登录状态后获取用户的对话列表
+        this.fetchCommunications()
       }
     },
 
@@ -116,6 +167,115 @@ export default {
       this.isLoggedIn = false
       this.userName = ''
       this.userId = ''
+      this.communications = []
+      this.selectedCommunicationId = null
+      this.selectedCommunicationName = ''
+      this.messages = []
+    },
+
+    // 获取用户的对话列表
+    async fetchCommunications() {
+      if (!this.userId) return
+      
+      try {
+        const response = await axios.get(`http://localhost:8081/api/communications/user/${this.userId}`)
+        this.communications = response.data
+      } catch (error) {
+        console.error('获取对话列表失败:', error)
+      }
+    },
+
+    // 选择对话
+    async selectCommunication(communicationId) {
+      this.selectedCommunicationId = communicationId
+      
+      // 找到对应的对话名称
+      const communication = this.communications.find(comm => comm.id === communicationId)
+      if (communication) {
+        this.selectedCommunicationName = communication.name
+      }
+      
+      // 获取对话的消息
+      await this.fetchMessages(communicationId)
+    },
+
+    // 获取对话的消息
+    async fetchMessages(communicationId) {
+      try {
+        const response = await axios.get(`http://localhost:8081/api/messages/communication/${communicationId}`)
+        this.messages = response.data
+      } catch (error) {
+        console.error('获取消息失败:', error)
+      }
+    },
+
+    // 格式化时间
+    formatTime(timeString) {
+      const date = new Date(timeString)
+      return date.toLocaleString()
+    },
+
+    // 创建新对话
+    async createNewCommunication() {
+      if (!this.isLoggedIn) {
+        alert('请先登录')
+        return
+      }
+      
+      try {
+        const newCommunication = {
+          userId: this.userId,
+          name: '未命名',
+          createdAt: new Date().toISOString()
+        }
+        
+        const response = await axios.post('http://localhost:8081/api/communications', newCommunication)
+        
+        // 重新获取对话列表
+        await this.fetchCommunications()
+        
+        // 自动选中新创建的对话
+        this.selectCommunication(response.data.id)
+      } catch (error) {
+        console.error('创建新对话失败:', error)
+        alert('创建新对话失败: ' + error.message)
+      }
+    },
+
+    // 发送消息
+    async sendMessage() {
+      if (!this.isLoggedIn) {
+        alert('请先登录')
+        return
+      }
+      
+      if (!this.selectedCommunicationId) {
+        alert('请先选择一个对话')
+        return
+      }
+      
+      if (!this.messageInput.trim()) {
+        return
+      }
+      
+      try {
+        const requestData = {
+          communicationId: this.selectedCommunicationId,
+          content: this.messageInput
+        }
+        
+        // 调用后端聊天接口
+        await axios.post('http://localhost:8081/api/messages/chat', requestData)
+        
+        // 清空输入框
+        this.messageInput = ''
+        
+        // 重新获取消息列表
+        await this.fetchMessages(this.selectedCommunicationId)
+      } catch (error) {
+        console.error('发送消息失败:', error)
+        alert('发送消息失败: ' + error.message)
+      }
     }
   },
   mounted() {
@@ -176,14 +336,58 @@ export default {
   bottom: 0;
   padding: 5px;
   text-align: center;
-
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.content h1 {
+.welcome h1 {
   margin-top: 40vh;
+}
+
+.chat-area {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  text-align: left;
+}
+
+.message {
+  margin-bottom: 15px;
+  max-width: 70%;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #f0f0f0;
+  text-align: left;
+}
+
+.message.status-1 {
+  background-color: #e0e0e0;
+  margin-left: auto;
+  text-align: right;
+}
+
+.message-content {
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+.message-time {
+  font-size: 12px;
+  color: #666;
 }
 
 .input-area {
@@ -198,16 +402,33 @@ export default {
   padding: 15px;
   box-sizing: border-box;
   overflow-y: hidden;
+  display: flex;
+  align-items: center;
 }
 
 .chat-input {
-  width: 95%;
+  flex: 1;
   height: 100%;
   border: none;
   outline: none;
   resize: none;
   font-size: 16px;
   line-height: 1;
+}
+
+.send-btn {
+  margin-left: 10px;
+  padding: 10px 20px;
+  background-color: #3c8cdc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  height: 100%;
+}
+
+.send-btn:hover {
+  background-color: #2c3e50;
 }
 
 .login-status {
@@ -218,7 +439,6 @@ export default {
   border-top: 1px solid #666;
   padding-top: 10px;
   font-weight: bold;
-
 }
 
 .login-btn {
@@ -282,11 +502,37 @@ export default {
 
 .history-title {
   width: 100%;
-
   color: #000000;
   font-size: 15px;
   margin: 0 0 10px 0;
   font-weight: normal;
+}
+
+.communication-list {
+  margin-bottom: 100px;
+}
+
+.communication-item {
+  padding: 10px;
+  margin-bottom: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.communication-item:hover {
+  background-color: #e0e0e0;
+}
+
+.communication-item.active {
+  background-color: #d0d0d0;
+  font-weight: bold;
+}
+
+.no-communications {
+  margin-bottom: 100px;
+  color: #666;
+  font-style: italic;
 }
 
 .modal-overlay {
