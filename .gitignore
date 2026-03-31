@@ -33,10 +33,11 @@ build/
 ### VS Code ###（已取消忽略）
 # .vscode/
 
-# 前端忽略规则（已取消忽略node_modules）
-# .DS_Store
-# node_modules
-# /dist
+# 前端忽略规则
+.DS_Store
+node_modules
+/dist
+package-lock.json
 
 # local env files
 .env.local
