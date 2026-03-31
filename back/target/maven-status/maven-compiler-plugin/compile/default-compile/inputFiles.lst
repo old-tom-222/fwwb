@@ -10,6 +10,7 @@ D:\STUDY\Web_work\fwwb_test\back\src\main\java\com\example\demo\model\User.java
 D:\STUDY\Web_work\fwwb_test\back\src\main\java\com\example\demo\model\Message.java
 D:\STUDY\Web_work\fwwb_test\back\src\main\java\com\example\demo\repository\UserRepository.java
 D:\STUDY\Web_work\fwwb_test\back\src\main\java\com\example\demo\controller\CommunicationController.java
+D:\STUDY\Web_work\fwwb_test\back\src\main\java\com\example\demo\util\AIResponseFormatter.java
 D:\STUDY\Web_work\fwwb_test\back\src\main\java\com\example\demo\util\FileParser.java
 D:\STUDY\Web_work\fwwb_test\back\src\main\java\com\example\demo\model\Communication.java
 D:\STUDY\Web_work\fwwb_test\back\src\main\java\com\example\demo\service\ZhipuAIService.java

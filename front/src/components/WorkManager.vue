@@ -45,14 +45,20 @@
           <h2>{{ selectedCommunicationName }}</h2>
         </div>
         <div class="messages-container">
-          <div 
-            v-for="message in sortedMessages" 
+          <div
+            v-for="message in sortedMessages"
             :key="message.id"
-            class="message"
+            class="message-container"
             :class="{ 'status-1': message.status === 1 }"
           >
-            <div class="message-content" v-html="message.content"></div>
-            <div class="message-time">{{ formatTime(message.createdAt) }}</div>
+            <div class="message-avatar">
+              <div v-if="message.status === 0" class="ai-avatar">🤖</div>
+              <div v-else class="user-avatar">👤</div>
+            </div>
+            <div class="message">
+              <div class="message-content" v-html="message.content"></div>
+              <div class="message-time">{{ formatTime(message.createdAt) }}</div>
+            </div>
           </div>
         </div>
         <div v-if="inputAreaVisible" class="input-area">
@@ -799,7 +805,7 @@ export default {
 /* 通用按钮样式 */
 .main-btn {
   padding: 10px 20px;
-  background-color: #3c8cdc;
+  background-color: #4a90e2;
   color: white;
   border: none;
   border-radius: 4px;
@@ -809,11 +815,11 @@ export default {
 }
 
 .main-btn:hover {
-  background-color: #2c3e50;
+  background-color: #357abd;
 }
 
 .main-btn:disabled {
-  background-color: #cccccc;
+  background-color: #a8c8e8;
   cursor: not-allowed;
 }
 
@@ -920,19 +926,57 @@ export default {
   text-align: left;
 }
 
-.message {
+.message-container {
+  display: flex;
+  align-items: flex-start;
   margin-bottom: 15px;
+  max-width: 80%;
+}
+
+.message-container.status-1 {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  margin: 0 10px;
+}
+
+.ai-avatar, .user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background-color: #f0f0f0;
+  border: 1px solid #e0e0e0;
+}
+
+.ai-avatar {
+  background-color: #e6f0fa;
+  border-color: #4a90e2;
+}
+
+.user-avatar {
+  background-color: #f8fafc;
+  border-color: #4a90e2;
+}
+
+.message {
   max-width: 70%;
   padding: 10px;
   border-radius: 8px;
-  background-color: #f0f0f0;
+  background-color: #f8fafc;
   text-align: left;
+  border: 1px solid #e6f0fa;
 }
 
-.message.status-1 {
-  background-color: #e0e0e0;
-  margin-left: auto;
+.message-container.status-1 .message {
+  background-color: #e6f0fa;
   text-align: right;
+  border: 1px solid #4a90e2;
 }
 
 .message-content {
@@ -951,24 +995,27 @@ export default {
   left: 100px;
   right: 100px;
   height: 200px;
-  background-color: white;
-  border: 2px solid black;
+  background-color: #f8fafc;
+  border: 2px solid #4a90e2;
   border-radius: 8px;
   padding: 15px;
   box-sizing: border-box;
   overflow-y: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.1);
 }
 
 /* 文件暂存区样式 */
 .file-staging-area {
-  background-color: #f4f4f4;
+  background-color: #e6f0fa;
+  border: 1px solid #4a90e2;
   border-radius: 4px;
   padding: 10px;
   margin-bottom: 10px;
   width: 100%;
   box-sizing: border-box;
+  box-shadow: inset 0 1px 3px rgba(74, 144, 226, 0.1);
 }
 
 .file-staging-header {
@@ -1277,12 +1324,14 @@ export default {
 }
 
 .communication-item:hover {
-  background-color: #e0e0e0;
+  background-color: #e6f0fa;
+  border-left: 3px solid #4a90e2;
 }
 
 .communication-item.active {
-  background-color: #d0d0d0;
+  background-color: #d0e4f7;
   font-weight: bold;
+  border-left: 4px solid #4a90e2;
 }
 
 .no-communications {
@@ -1305,11 +1354,13 @@ export default {
 }
 
 .modal-content {
-  background: white;
+  background: #f8fafc;
   padding: 20px;
+  border: 1px solid #4a90e2;
   border-radius: 8px;
   width: 300px;
   text-align: center;
+  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.2);
 }
 
 .modal-content h2 {
