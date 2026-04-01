@@ -1,0 +1,16 @@
+com\example\demo\model\Repository.class
+com\example\demo\repository\RepositoryRepository.class
+com\example\demo\BackApplication$WebConfig.class
+com\example\demo\repository\UserRepository.class
+com\example\demo\model\Message.class
+com\example\demo\model\Communication.class
+com\example\demo\service\ZhipuAIService.class
+com\example\demo\controller\UserController.class
+com\example\demo\repository\MessageRepository.class
+com\example\demo\util\FileParser.class
+com\example\demo\controller\MessageController.class
+com\example\demo\model\User.class
+com\example\demo\util\AIResponseFormatter.class
+com\example\demo\controller\RepositoryController.class
+com\example\demo\controller\CommunicationController.class
+com\example\demo\repository\CommunicationRepository.class
