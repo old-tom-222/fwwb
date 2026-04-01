@@ -1,0 +1,68 @@
+<template>
+  <div class="work-manager">
+    <!-- 侧边栏 -->
+    <WorkManagerSidebar 
+      :isLoggedIn="isLoggedIn"
+      :userName="userName"
+      :userId="userId"
+      :communications="communications"
+      :selectedCommunicationId="selectedCommunicationId"
+      @open-repository="openRepositoryModal"
+      @create-communication="createNewCommunication"
+      @select-communication="selectCommunication"
+      @open-rename="openRenameModal"
+      @open-delete="openDeleteModal"
+      @logout="logout"
+      @show-login="showLoginModal = true"
+    />
+    
+    <!-- 聊天区域 -->
+    <WorkManagerChatArea 
+      :selectedCommunicationId="selectedCommunicationId"
+      :selectedCommunicationName="selectedCommunicationName"
+      :messages="messages"
+      :stagedFiles="stagedFiles"
+      :loading="loading"
+      @add-file="addFile"
+      @remove-file="removeFile"
+      @send-message="sendMessage"
+      @generate-docx="generateDocx"
+      @generate-xlsx="generateXlsx"
+    />
+    
+    <!-- 登录模态框 -->
+    <LoginModal 
+      v-if="showLoginModal"
+      @close="showLoginModal = false"
+      @login="login"
+    />
+    
+    <!-- 重命名模态框 -->
+    <RenameModal 
+      v-if="showRenameModal"
+      :communicationId="renameForm.id"
+      :currentName="renameForm.name"
+      @close="showRenameModal = false"
+      @rename="renameCommunication"
+    />
+    
+    <!-- 删除模态框 -->
+    <DeleteModal 
+      v-if="showDeleteModal"
+      :communicationId="deleteForm.id"
+      :communicationName="deleteForm.name"
+      @close="showDeleteModal = false"
+      @delete="deleteCommunication"
+    />
+    
+    <!-- 云仓库弹窗 -->
+    <RepositoryModal 
+      v-if="showRepositoryModal"
+      :repositoryFiles="repositoryFiles"
+      @close="showRepositoryModal = false"
+      @add-file="addFile"
+      @upload-files="uploadFiles"
+      @delete-file="deleteRepositoryFile"
+    />
+  </div>
+</template>
