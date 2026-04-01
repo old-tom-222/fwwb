@@ -11,7 +11,7 @@
           <label>密码:</label>
           <input v-model="loginForm.password" type="password" required>
         </div>
-        <button type="submit">登录</button>
+        <button type="submit">登录/注册</button>
         <button type="button" @click="$emit('close')">取消</button>
       </form>
     </div>

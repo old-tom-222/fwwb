@@ -1,6 +1,6 @@
 # 后端忽略规则
 back/target/
-back/upload/
+back/uploads/
 back/.mvn/wrapper/maven-wrapper.jar
 
 # 前端忽略规则
