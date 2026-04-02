@@ -12,7 +12,7 @@ user集合：
 
 repository集合：
 {
-  "_id": {
+  "_id": {b
     "$oid": "69cc8db526a2d001d1dc6e56"
   },
   "userId": "69ca0c68d6cab62b14596190",

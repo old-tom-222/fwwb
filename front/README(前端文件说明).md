@@ -23,7 +23,6 @@ front/
 │   │   │   ├── RepositoryModal.vue # 仓库模态框
 │   │   │   └── Sidebar.vue      # 侧边栏组件
 │   │   ├── work-manager-core/   # 工作管理核心文件
-│   │   │   ├── WorkManager.css  # 样式文件
 │   │   │   ├── WorkManager.html # 模板文件
 │   │   │   └── WorkManager.js   # 逻辑文件
 │   │   ├── UserManager.vue      # 用户管理组件
