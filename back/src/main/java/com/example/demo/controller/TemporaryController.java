@@ -9,12 +9,19 @@ import com.example.demo.util.FileParser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -40,10 +47,30 @@ public class TemporaryController {
         return temporaryRepository.findAll();
     }
 
-    @Operation(summary = "根据ID获取临时文件", description = "根据唯一ID获取临时文件记录")
+    @Operation(summary = "根据ID获取临时文件", description = "根据唯一ID获取临时文件内容")
     @GetMapping("/{id}")
-    public Temporary getTemporaryById(@PathVariable String id) {
-        return temporaryRepository.findById(id).orElse(null);
+    public ResponseEntity<Resource> getTemporaryById(@PathVariable String id) throws IOException {
+        Temporary temporary = temporaryRepository.findById(id).orElse(null);
+        if (temporary == null || temporary.getUrl() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        File file = new File(temporary.getUrl());
+        if (!file.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        Path path = Paths.get(temporary.getUrl());
+        Resource resource = new UrlResource(path.toUri());
+        
+        if (resource.exists() || resource.isReadable()) {
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + temporary.getName())
+                .body(resource);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @Operation(summary = "根据用户ID获取临时文件", description = "根据用户ID查询临时文件记录")
@@ -168,9 +195,8 @@ public class TemporaryController {
                 String keyword = line.substring(0, colonIndex).trim();
                 String contextText = line.substring(colonIndex + 1).trim();
                 
-                // 移除关键词前的序号和"关键词"字样（如果有）
+                // 移除关键词前的序号（如果有）
                 keyword = keyword.replaceAll("^\\d+\\.", "").trim();
-                keyword = keyword.replaceAll("^关键词", "").trim();
                 
                 if (!keyword.isEmpty() && !contextText.isEmpty()) {
                     Data data = new Data();

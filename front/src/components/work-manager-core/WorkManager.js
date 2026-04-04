@@ -5,7 +5,7 @@ import RenameModal from '../work-manager/RenameModal.vue'
 import DeleteModal from '../work-manager/DeleteModal.vue'
 import RepositoryModal from '../work-manager/RepositoryModal.vue'
 import { userApi, communicationApi, messageApi, repositoryApi } from '../../utils/api'
-import { checkLoginStatus, saveLoginStatus, clearLoginStatus, createFileFromRepository } from '../../utils/utils'
+import { checkLoginStatus, saveLoginStatus, clearLoginStatus } from '../../utils/utils'
 
 export default {
   name: 'WorkManager',
@@ -71,6 +71,24 @@ export default {
         this.userId = userId
         this.userName = userName
         this.fetchCommunications()
+        this.fetchUserFiles()
+      }
+    },
+    
+    async fetchUserFiles() {
+      if (!this.userId) return
+      
+      try {
+        const response = await fetch(`/api/temporary/user/${this.userId}`)
+        if (response.ok) {
+          const files = await response.json()
+          console.log('WorkManager: 获取到用户文件:', files)
+          this.stagedFiles = Array.isArray(files) ? files : []
+          console.log('WorkManager: 暂存区文件:', this.stagedFiles)
+        }
+      } catch (error) {
+        console.error('获取用户文件失败:', error)
+        this.stagedFiles = []
       }
     },
 
@@ -109,7 +127,9 @@ export default {
 
     async fetchMessages(communicationId) {
       try {
+        console.log('正在获取消息列表，对话ID:', communicationId)
         this.messages = await messageApi.getCommunicationMessages(communicationId)
+        console.log('获取消息列表成功:', this.messages)
       } catch (error) {
         console.error('获取消息失败:', error)
       }
@@ -145,10 +165,15 @@ export default {
       this.loading = true
       
       try {
-        const processedFiles = await this.processFiles(files)
-        await messageApi.sendMessage(this.selectedCommunicationId, content, processedFiles)
+        // 确保content是字符串
+        const contentStr = typeof content === 'string' ? content : ''
+        console.log('正在发送消息，内容:', contentStr, '文件:', files)
+        const processed = await this.processFiles(files)
+        console.log('处理文件后:', processed)
+        await messageApi.sendMessage(this.selectedCommunicationId, contentStr, processed.files, processed.ids)
+        console.log('发送消息成功')
         
-        this.stagedFiles = []
+        // 不移除暂存区文件，让用户自己管理
         await this.fetchMessages(this.selectedCommunicationId)
       } catch (error) {
         console.error('发送消息失败:', error)
@@ -202,26 +227,18 @@ export default {
       }
     },
     
-    addFile(file) {
-      if (this.stagedFiles.length >= 5) {
-        alert('暂存区最多只能存储5个文件')
-        return
-      }
+    addFile() {
+      console.log('WorkManager: 添加文件，触发重新获取用户文件')
       
-      const isFileExist = this.stagedFiles.some(stagedFile => stagedFile.name === file.name)
-      if (isFileExist) {
-        alert('该文件已在暂存区中')
-        return
-      }
-      
-      this.stagedFiles.push(file)
-      if (file.url) {
-        alert('文件已添加到暂存区')
-      }
+      // 直接从后端获取用户文件，确保暂存区与temporary集合同步
+      this.fetchUserFiles()
     },
     
-    removeFile(index) {
-      this.stagedFiles.splice(index, 1)
+    removeFile() {
+      console.log('WorkManager: 移除文件，触发重新获取用户文件')
+      
+      // 直接从后端获取用户文件，确保暂存区与temporary集合同步
+      this.fetchUserFiles()
     },
     
     async openRepositoryModal() {
@@ -283,8 +300,10 @@ export default {
       this.loading = true
       
       try {
+        // 确保content是字符串
+        const contentStr = typeof content === 'string' ? content : ''
         const processedFiles = await this.processFiles(files)
-        await messageApi.generateDocx(this.selectedCommunicationId, content, processedFiles)
+        await messageApi.generateDocx(this.selectedCommunicationId, contentStr, processedFiles)
         
         alert('文档生成成功，请在对话中查看下载链接')
         this.stagedFiles = []
@@ -311,8 +330,10 @@ export default {
       this.loading = true
       
       try {
+        // 确保content是字符串
+        const contentStr = typeof content === 'string' ? content : ''
         const processedFiles = await this.processFiles(files)
-        await messageApi.generateXlsx(this.selectedCommunicationId, content, processedFiles)
+        await messageApi.generateXlsx(this.selectedCommunicationId, contentStr, processedFiles)
         
         alert('表格生成成功，请在对话中查看下载链接')
         this.stagedFiles = []
@@ -327,21 +348,34 @@ export default {
     
     async processFiles(files) {
       const processedFiles = []
+      const fileIds = []
+      if (!files || !Array.isArray(files)) {
+        return { files: processedFiles, ids: fileIds }
+      }
+      
       for (const file of files) {
-        if (file.url && !(file instanceof File)) {
+        if (file instanceof File) {
+          processedFiles.push(file)
+        } else if (file && file.url && file.id) {
           try {
-            const fileObject = await createFileFromRepository(file)
-            processedFiles.push(fileObject)
+            // 对于从temporary集合返回的文件对象，我们需要从后端下载
+            const response = await fetch(`/api/temporary/${file.id}`)
+            if (response.ok) {
+              const blob = await response.blob()
+              processedFiles.push(new File([blob], file.name || 'unknown.txt'))
+              fileIds.push(file.id)
+            } else {
+              console.error('获取临时文件失败:', response.status)
+              throw new Error('获取临时文件失败')
+            }
           } catch (error) {
-            console.error('下载文件失败:', error)
-            alert('下载文件失败: ' + error.message)
+            console.error('处理文件失败:', error)
+            alert('处理文件失败: ' + error.message)
             throw error
           }
-        } else {
-          processedFiles.push(file)
         }
       }
-      return processedFiles
+      return { files: processedFiles, ids: fileIds }
     }
   },
   mounted() {

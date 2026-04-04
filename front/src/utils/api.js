@@ -49,31 +49,54 @@ export const messageApi = {
   },
   
   // 发送消息
-  sendMessage: async (communicationId, content, files) => {
+  sendMessage: async (communicationId, content, files, fileIds) => {
+    console.log('API: 发送消息，对话ID:', communicationId, '内容:', content, '文件:', files, '文件ID:', fileIds)
     const formData = new FormData()
     formData.append('communicationId', communicationId)
-    formData.append('content', content)
+    formData.append('content', typeof content === 'string' ? content : '')
     
-    files.forEach(file => {
-      formData.append('files', file)
-    })
+    if (fileIds && Array.isArray(fileIds)) {
+      console.log('API: 添加文件ID:', fileIds)
+      fileIds.forEach(id => {
+        formData.append('fileIds', id)
+      })
+    }
     
-    await axios.post(`${API_BASE_URL}/messages/chat`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+    if (files && Array.isArray(files)) {
+      console.log('API: 添加文件:', files)
+      files.forEach(file => {
+        if (file instanceof File) {
+          formData.append('files', file)
+        }
+      })
+    }
+    
+    try {
+      const response = await axios.post(`${API_BASE_URL}/messages/chat`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      console.log('API: 发送消息成功，响应:', response.data)
+    } catch (error) {
+      console.error('API: 发送消息失败:', error)
+      throw error
+    }
   },
   
   // 生成 docx
   generateDocx: async (communicationId, content, files) => {
     const formData = new FormData()
     formData.append('communicationId', communicationId)
-    formData.append('content', content)
+    formData.append('content', typeof content === 'string' ? content : '')
     
-    files.forEach(file => {
-      formData.append('files', file)
-    })
+    if (files && Array.isArray(files)) {
+      files.forEach(file => {
+        if (file instanceof File) {
+          formData.append('files', file)
+        }
+      })
+    }
     
     await axios.post(`${API_BASE_URL}/messages/generate-docx`, formData, {
       headers: {
@@ -86,11 +109,15 @@ export const messageApi = {
   generateXlsx: async (communicationId, content, files) => {
     const formData = new FormData()
     formData.append('communicationId', communicationId)
-    formData.append('content', content)
+    formData.append('content', typeof content === 'string' ? content : '')
     
-    files.forEach(file => {
-      formData.append('files', file)
-    })
+    if (files && Array.isArray(files)) {
+      files.forEach(file => {
+        if (file instanceof File) {
+          formData.append('files', file)
+        }
+      })
+    }
     
     await axios.post(`${API_BASE_URL}/messages/generate-xlsx`, formData, {
       headers: {

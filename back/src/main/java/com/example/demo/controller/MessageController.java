@@ -1,7 +1,9 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.Message;
+import com.example.demo.model.Data;
 import com.example.demo.repository.MessageRepository;
+import com.example.demo.repository.DataRepository;
 import com.example.demo.service.ZhipuAIService;
 import com.example.demo.util.FileParser;
 import com.example.demo.util.AIResponseFormatter;
@@ -25,6 +27,9 @@ public class MessageController {
     
     @Autowired
     private ZhipuAIService zhipuAIService;
+    
+    @Autowired
+    private DataRepository dataRepository;
 
     @GetMapping
     @Operation(summary = "获取所有消息", description = "返回所有消息列表")
@@ -54,7 +59,12 @@ public class MessageController {
     @Operation(summary = "聊天接口", description = "处理用户聊天请求，返回AI回复")
     public Message chat(@RequestParam("communicationId") String communicationId,
                        @RequestParam("content") String content,
-                       @RequestParam(value = "files", required = false) MultipartFile[] files) {
+                       @RequestParam(value = "files", required = false) MultipartFile[] files,
+                       @RequestParam(value = "fileIds", required = false) String[] fileIds) {
+        System.out.println("收到聊天请求，对话ID: " + communicationId + "，内容: " + content);
+        System.out.println("文件数量: " + (files != null ? files.length : 0));
+        System.out.println("文件ID数量: " + (fileIds != null ? fileIds.length : 0));
+        
         // 处理上传的文件
         List<String> fileContents = new ArrayList<>();
         if (files != null && files.length > 0) {
@@ -65,6 +75,7 @@ public class MessageController {
                     // 解析文件内容
                     String fileContent = FileParser.parseFile(file.getOriginalFilename(), file.getInputStream());
                     fileContents.add(fileContent);
+                    System.out.println("文件内容长度: " + fileContent.length());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -79,9 +90,42 @@ public class MessageController {
         userMessage.setStatus(1);
         userMessage.setCreatedAt(new java.util.Date());
         messageRepository.save(userMessage);
+        System.out.println("用户消息已保存: " + userMessage);
         
-        // 调用智谱API获取AI回复，传递文件内容
-        String aiResponse = zhipuAIService.chat(content, fileContents);
+        // 构建完整的消息内容，包含用户需求和文件内容
+        StringBuilder fullContent = new StringBuilder();
+        fullContent.append("用户需求：\n").append(content).append("\n\n");
+        
+        if (!fileContents.isEmpty()) {
+            for (int i = 0; i < fileContents.size(); i++) {
+                fullContent.append("文件").append(i + 1).append("内容：\n").append(fileContents.get(i)).append("\n\n");
+                System.out.println("添加文件" + (i + 1) + "内容到AI请求");
+            }
+        }
+        
+        // 添加文件的关键词内容
+        if (fileIds != null && fileIds.length > 0) {
+            for (int i = 0; i < fileIds.length; i++) {
+                String fileId = fileIds[i];
+                System.out.println("处理文件ID: " + fileId);
+                List<Data> dataList = dataRepository.findByArticleId(fileId);
+                System.out.println("文件" + (i + 1) + "的关键词数量: " + dataList.size());
+                if (!dataList.isEmpty()) {
+                    fullContent.append("文件").append(i + 1).append("关键词内容：\n");
+                    for (Data data : dataList) {
+                        fullContent.append("关键词：").append(data.getKeyword()).append("，句子：").append(data.getContextText()).append("\n");
+                        System.out.println("添加关键词: " + data.getKeyword() + "，句子: " + data.getContextText());
+                    }
+                    fullContent.append("\n");
+                }
+            }
+        }
+        
+        System.out.println("发送给AI的完整内容长度: " + fullContent.length());
+        System.out.println("发送给AI的完整内容: " + fullContent.toString());
+        
+        // 调用智谱API获取AI回复，传递完整内容
+        String aiResponse = zhipuAIService.chat(fullContent.toString(), fileContents);
         
         // 美化AI回复
         String formattedResponse = AIResponseFormatter.formatResponse(aiResponse);
@@ -93,6 +137,7 @@ public class MessageController {
         aiMessage.setStatus(0);
         aiMessage.setCreatedAt(new java.util.Date());
         messageRepository.save(aiMessage);
+        System.out.println("AI回复已保存: " + aiMessage);
         
         return aiMessage;
     }

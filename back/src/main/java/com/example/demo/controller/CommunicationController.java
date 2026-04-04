@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.model.Communication;
 import com.example.demo.repository.CommunicationRepository;
+import com.example.demo.repository.MessageRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,9 @@ import java.util.Map;
 public class CommunicationController {
     @Autowired
     private CommunicationRepository communicationRepository;
+    
+    @Autowired
+    private MessageRepository messageRepository;
 
     @GetMapping
     @Operation(summary = "获取所有对话", description = "返回所有对话列表")
@@ -67,8 +71,11 @@ public class CommunicationController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除对话", description = "根据对话ID删除对话")
+    @Operation(summary = "删除对话", description = "根据对话ID删除对话及相关消息")
     public void deleteCommunication(@PathVariable String id) {
+        // 先删除与该对话相关的所有消息
+        messageRepository.deleteByCommunicationId(id);
+        // 再删除对话
         communicationRepository.deleteById(id);
     }
 }

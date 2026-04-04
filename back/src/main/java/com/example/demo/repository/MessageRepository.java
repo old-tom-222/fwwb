@@ -24,4 +24,7 @@ public interface MessageRepository extends MongoRepository<Message, String> {
 
     // 根据时间范围查询
     List<Message> findByCreatedAtBetween(Date startDate, Date endDate);
+    
+    // 根据对话 ID 删除所有消息
+    void deleteByCommunicationId(String communicationId);
 }

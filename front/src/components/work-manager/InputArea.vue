@@ -4,7 +4,7 @@
       <!-- 文件暂存区 -->
       <div v-if="stagedFiles.length > 0" class="file-staging-area">
         <div class="file-list">
-          <div v-for="(file, index) in stagedFiles" :key="index" class="file-item">
+          <div v-for="(file, index) in stagedFiles" :key="file.id || file.name || index" class="file-item">
             <span class="file-name">{{ file.name }}</span>
             <button class="remove-btn" @click="removeFile(index)">❌</button>
           </div>
@@ -61,13 +61,16 @@ export default {
     loading: {
       type: Boolean,
       default: false
+    },
+    stagedFiles: {
+      type: Array,
+      default: () => []
     }
   },
   data() {
     return {
       messageInput: '',
       inputAreaVisible: true,
-      stagedFiles: [],
       internalLoading: false
     }
   },
@@ -118,7 +121,7 @@ export default {
           
           if (response.ok) {
             const data = await response.json()
-            this.stagedFiles.push(data)
+            this.$emit('add-file', data)
           } else {
             alert('文件上传失败')
           }
@@ -148,7 +151,7 @@ export default {
           this.internalLoading = false
         }
       }
-      this.stagedFiles.splice(index, 1)
+      this.$emit('remove-file', index)
     },
     
     async sendMessage() {
@@ -156,9 +159,9 @@ export default {
         return
       }
       
+      console.log('InputArea: 发送消息，内容:', this.messageInput, '文件:', this.stagedFiles)
       this.$emit('send-message', this.messageInput, this.stagedFiles)
       this.messageInput = ''
-      this.stagedFiles = []
     },
     
     async generateDocx() {
@@ -169,7 +172,6 @@ export default {
       
       this.$emit('generate-docx', this.messageInput, this.stagedFiles)
       this.messageInput = ''
-      this.stagedFiles = []
     },
     
     async generateXlsx() {
@@ -180,7 +182,6 @@ export default {
       
       this.$emit('generate-xlsx', this.messageInput, this.stagedFiles)
       this.messageInput = ''
-      this.stagedFiles = []
     }
   }
 }

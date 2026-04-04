@@ -27,9 +27,12 @@
       <!-- 输入区域组件 -->
       <WorkManagerInputArea 
         :loading="loading"
-        @send-message="$emit('send-message', ...arguments)"
+        :stagedFiles="stagedFiles"
+        @send-message="handleSendMessage"
         @generate-docx="$emit('generate-docx', ...arguments)"
         @generate-xlsx="$emit('generate-xlsx', ...arguments)"
+        @add-file="$emit('add-file', ...arguments)"
+        @remove-file="$emit('remove-file', ...arguments)"
       />
     </div>
   </main>
@@ -57,6 +60,10 @@ export default {
       type: Array,
       default: () => []
     },
+    stagedFiles: {
+      type: Array,
+      default: () => []
+    },
     
     loading: {
       type: Boolean,
@@ -74,7 +81,11 @@ export default {
     }
   },
   methods: {
-    formatTime
+    formatTime,
+    handleSendMessage(content, files) {
+      console.log('ChatArea: 接收到发送消息事件，内容:', content, '文件:', files)
+      this.$emit('send-message', content, files)
+    }
   }
 }
 </script>
