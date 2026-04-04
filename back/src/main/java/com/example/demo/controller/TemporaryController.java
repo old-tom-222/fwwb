@@ -108,6 +108,12 @@ public class TemporaryController {
         String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
         String filePath = uploadDir + fileName;
 
+        // 解析文件内容
+        String fileContent = null;
+        try (InputStream inputStream = file.getInputStream()) {
+            fileContent = FileParser.parseFile(file.getOriginalFilename(), inputStream);
+        }
+
         // 保存文件
         file.transferTo(new File(filePath));
 
@@ -117,12 +123,6 @@ public class TemporaryController {
         temporary.setName(file.getOriginalFilename());
         temporary.setUrl(filePath);
         temporary = temporaryRepository.save(temporary);
-
-        // 解析文件内容
-        String fileContent = null;
-        try (InputStream inputStream = file.getInputStream()) {
-            fileContent = FileParser.parseFile(file.getOriginalFilename(), inputStream);
-        }
 
         // 调用智谱AI分析文件内容，提取关键词和对应的句子
         if (fileContent != null && !fileContent.isEmpty()) {
@@ -168,8 +168,9 @@ public class TemporaryController {
                 String keyword = line.substring(0, colonIndex).trim();
                 String contextText = line.substring(colonIndex + 1).trim();
                 
-                // 移除关键词前的序号（如果有）
+                // 移除关键词前的序号和"关键词"字样（如果有）
                 keyword = keyword.replaceAll("^\\d+\\.", "").trim();
+                keyword = keyword.replaceAll("^关键词", "").trim();
                 
                 if (!keyword.isEmpty() && !contextText.isEmpty()) {
                     Data data = new Data();
