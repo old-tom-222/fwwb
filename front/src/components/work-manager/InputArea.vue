@@ -2,19 +2,37 @@
   <div>
     <div v-if="inputAreaVisible" class="input-area">
       <!-- 文件暂存区 -->
-      <div class="file-staging-area">
-        <div class="file-staging-header">
-          <span>文件暂存区</span>
-          <button class="import-btn main-btn" @click="triggerFileInput">导入文件</button>
-        </div>
+      <div v-if="stagedFiles.length > 0" class="file-staging-area">
         <div class="file-list">
           <div v-for="(file, index) in stagedFiles" :key="index" class="file-item">
             <span class="file-name">{{ file.name }}</span>
-            <button class="remove-btn small-btn" @click="removeFile(index)">删除</button>
+            <button class="remove-btn" @click="removeFile(index)">❌</button>
           </div>
-          <div v-if="stagedFiles.length === 0" class="no-files">
-            暂无文件
-          </div>
+        </div>
+      </div>
+      <!-- 输入区域 -->
+      <div class="input-section">
+        <textarea 
+          class="chat-input" 
+          placeholder="输入消息..."
+          v-model="messageInput"
+          @keyup.enter.ctrl="sendMessage"
+          :disabled="internalLoading"
+        ></textarea>
+        <div v-if="internalLoading" class="loading-overlay">
+          文件添加中...
+        </div>
+      </div>
+      <!-- 按钮区域 -->
+      <div class="button-section">
+        <div class="action-buttons">
+          <button class="action-btn small-btn" @click="generateDocx" :disabled="internalLoading">docx</button>
+          <button class="action-btn small-btn" @click="generateXlsx" :disabled="internalLoading">xlsx</button>
+          <button class="hide-btn small-btn" @click="toggleInputArea" :disabled="internalLoading">隐藏</button>
+        </div>
+        <div class="send-buttons">
+          <button class="add-btn small-btn" @click="triggerFileInput" :disabled="internalLoading">+</button>
+          <button class="send-btn small-btn" @click="sendMessage" :disabled="internalLoading">⬆</button>
         </div>
       </div>
       <!-- 隐藏的文件输入元素 -->
@@ -26,27 +44,10 @@
         @change="handleFileInput"
         accept=".docx,.md,.xlsx,.txt"
       />
-      <!-- 聊天输入区域 -->
-      <div class="chat-input-container">
-        <textarea 
-          class="chat-input" 
-          placeholder="输入消息..."
-          v-model="messageInput"
-          @keyup.enter.ctrl="sendMessage"
-          :disabled="loading"
-        ></textarea>
-        <div v-if="loading" class="loading-overlay">
-          正在思考中...
-        </div>
-        <button class="send-btn main-btn" @click="sendMessage" :disabled="loading">⬆</button>
-        <button class="action-btn main-btn" @click="generateDocx" :disabled="loading">docx</button>
-        <button class="action-btn main-btn" @click="generateXlsx" :disabled="loading">xlsx</button>
-        <button class="hide-btn main-btn" @click="toggleInputArea" :disabled="loading">隐藏</button>
-      </div>
     </div>
     <!-- 显示按钮 -->
     <div v-if="!inputAreaVisible" class="show-input-btn">
-      <button class="show-btn main-btn" @click="toggleInputArea">显示</button>
+      <button class="show-btn small-btn" @click="toggleInputArea">显示</button>
     </div>
   </div>
 </template>
@@ -57,10 +58,6 @@ import { isSupportedFileFormat } from '../../utils/utils'
 export default {
   name: 'WorkManagerInputArea',
   props: {
-    stagedFiles: {
-      type: Array,
-      default: () => []
-    },
     loading: {
       type: Boolean,
       default: false
@@ -69,15 +66,29 @@ export default {
   data() {
     return {
       messageInput: '',
-      inputAreaVisible: true
+      inputAreaVisible: true,
+      stagedFiles: [],
+      internalLoading: false
+    }
+  },
+  watch: {
+    loading: {
+      handler(newVal) {
+        this.internalLoading = newVal
+      },
+      immediate: true
     }
   },
   methods: {
+    toggleInputArea() {
+      this.inputAreaVisible = !this.inputAreaVisible
+    },
+    
     triggerFileInput() {
       this.$refs.fileInput.click()
     },
     
-    handleFileInput(event) {
+    async handleFileInput(event) {
       const files = event.target.files
       if (files.length === 0) return
       
@@ -93,18 +104,51 @@ export default {
           return
         }
         
-        this.$emit('add-file', file)
+        try {
+          this.internalLoading = true
+          // 上传文件到后端临时存储
+          const formData = new FormData()
+          formData.append('file', file)
+          formData.append('userId', localStorage.getItem('userId') || 'anonymous')
+          
+          const response = await fetch('/api/temporary/upload', {
+            method: 'POST',
+            body: formData
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            this.stagedFiles.push(data)
+          } else {
+            alert('文件上传失败')
+          }
+        } catch (error) {
+          console.error('文件上传失败:', error)
+          alert('文件上传失败')
+        } finally {
+          this.internalLoading = false
+        }
       }
       
       event.target.value = ''
     },
     
-    removeFile(index) {
-      this.$emit('remove-file', index)
-    },
-    
-    toggleInputArea() {
-      this.inputAreaVisible = !this.inputAreaVisible
+    async removeFile(index) {
+      const fileToRemove = this.stagedFiles[index]
+      if (fileToRemove && fileToRemove.id) {
+        try {
+          this.internalLoading = true
+          // 从后端删除文件
+          await fetch(`/api/temporary/${fileToRemove.id}`, {
+            method: 'DELETE'
+          })
+        } catch (error) {
+          console.error('文件删除失败:', error)
+        } finally {
+          this.internalLoading = false
+        }
+      }
+      this.stagedFiles.splice(index, 1)
     },
     
     async sendMessage() {
@@ -114,6 +158,7 @@ export default {
       
       this.$emit('send-message', this.messageInput, this.stagedFiles)
       this.messageInput = ''
+      this.stagedFiles = []
     },
     
     async generateDocx() {
@@ -124,6 +169,7 @@ export default {
       
       this.$emit('generate-docx', this.messageInput, this.stagedFiles)
       this.messageInput = ''
+      this.stagedFiles = []
     },
     
     async generateXlsx() {
@@ -134,6 +180,7 @@ export default {
       
       this.$emit('generate-xlsx', this.messageInput, this.stagedFiles)
       this.messageInput = ''
+      this.stagedFiles = []
     }
   }
 }
@@ -145,15 +192,17 @@ export default {
   bottom: 50px;
   left: 100px;
   right: 100px;
-  height: 200px;
+  min-height: 120px;
+  max-height: 400px;
   background-color: #f8fafc;
   border: 2px solid #4a90e2;
   border-radius: 8px;
   padding: 15px;
   box-sizing: border-box;
-  overflow-y: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  gap: 10px;
   box-shadow: 0 2px 4px rgba(74, 144, 226, 0.1);
 }
 
@@ -163,37 +212,26 @@ export default {
   border: 1px solid #4a90e2;
   border-radius: 4px;
   padding: 10px;
-  margin-bottom: 10px;
-  width: 100%;
   box-sizing: border-box;
   box-shadow: inset 0 1px 3px rgba(74, 144, 226, 0.1);
 }
 
-.file-staging-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-.import-btn {
-  padding: 2px 6px;
-  font-size: 12px;
-  border-radius: 3px;
-}
-
 .file-list {
-  max-height: 60px;
-  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .file-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 3px;
-  font-size: 14px;
+  background-color: white;
+  border: 1px solid #d0e3f8;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  max-width: 200px;
+  overflow: hidden;
 }
 
 .file-name {
@@ -201,46 +239,48 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-right: 4px;
 }
 
 .remove-btn {
-  padding: 1px 4px;
-  font-size: 10px;
-  background-color: #e0e0e0;
-  color: #333;
+  background: none;
   border: none;
-  border-radius: 2px;
+  font-size: 10px;
   cursor: pointer;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .remove-btn:hover {
-  background-color: #d0d0d0;
+  background-color: #f0f0f0;
+  border-radius: 50%;
 }
 
-.no-files {
-  font-style: italic;
-  color: #666;
-  font-size: 14px;
-}
-
-/* 聊天输入区域样式 */
-.chat-input-container {
-  display: flex;
-  align-items: stretch;
-  flex: 1;
+/* 输入区域样式 */
+.input-section {
   position: relative;
+  flex: 1;
+  min-height: 60px;
 }
 
 .chat-input {
-  flex: 1;
-  height: 100%;
+  width: 100%;
+  min-height: 60px;
+  max-height: 200px;
   border: none;
   outline: none;
   resize: none;
   font-size: 16px;
   line-height: 1.5;
-  padding: 5px;
+  padding: 10px;
   box-sizing: border-box;
+  border: 1px solid #e6f0fa;
+  border-radius: 4px;
+  background-color: white;
 }
 
 /* 加载中覆盖层样式 */
@@ -257,11 +297,101 @@ export default {
   font-size: 14px;
   color: #666;
   z-index: 10;
+  border-radius: 4px;
 }
 
-.hide-btn, .action-btn {
-  margin-left: 10px;
-  height: 80%;
+/* 按钮区域样式 */
+.button-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.send-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 通用按钮样式 */
+.small-btn {
+  padding: 6px 12px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s ease;
+}
+
+/* 发送按钮样式 */
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 0;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+/* 加号按钮样式 */
+.add-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 0;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.small-btn:hover {
+  background-color: #357abd;
+}
+
+.send-btn:hover {
+  background-color: #357abd;
+}
+
+.add-btn:hover {
+  background-color: #357abd;
+}
+
+.small-btn:disabled {
+  background-color: #a8c8e8;
+  cursor: not-allowed;
+}
+
+.send-btn:disabled {
+  background-color: #a8c8e8;
+  cursor: not-allowed;
+}
+
+.add-btn:disabled {
+  background-color: #a8c8e8;
+  cursor: not-allowed;
 }
 
 /* 显示按钮样式 */
@@ -274,49 +404,5 @@ export default {
 
 .show-btn {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* 通用按钮样式 */
-.main-btn {
-  padding: 10px 20px;
-  background-color: #4a90e2;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
-}
-
-/* 发送按钮样式 */
-.send-btn {
-  margin-left: 10px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  font-weight: bold;
-  padding: 0;
-}
-
-.main-btn:hover {
-  background-color: #357abd;
-}
-
-.main-btn:disabled {
-  background-color: #a8c8e8;
-  cursor: not-allowed;
-}
-
-.small-btn {
-  padding: 2px 6px;
-  font-size: 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
 }
 </style>

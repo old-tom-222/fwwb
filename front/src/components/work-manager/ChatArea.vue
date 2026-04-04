@@ -26,13 +26,10 @@
       </div>
       <!-- 输入区域组件 -->
       <WorkManagerInputArea 
-        :stagedFiles="stagedFiles"
         :loading="loading"
-        @add-file="$emit('add-file', $event)"
-        @remove-file="$emit('remove-file', $event)"
-        @send-message="$emit('send-message', $event, stagedFiles)"
-        @generate-docx="$emit('generate-docx', $event, stagedFiles)"
-        @generate-xlsx="$emit('generate-xlsx', $event, stagedFiles)"
+        @send-message="$emit('send-message', ...arguments)"
+        @generate-docx="$emit('generate-docx', ...arguments)"
+        @generate-xlsx="$emit('generate-xlsx', ...arguments)"
       />
     </div>
   </main>
@@ -60,10 +57,7 @@ export default {
       type: Array,
       default: () => []
     },
-    stagedFiles: {
-      type: Array,
-      default: () => []
-    },
+    
     loading: {
       type: Boolean,
       default: false
