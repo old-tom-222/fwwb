@@ -167,10 +167,6 @@ export default {
 
 <style scoped>
 .input-area {
-  position: absolute;
-  bottom: 50px;
-  left: 100px;
-  right: 100px;
   min-height: 120px;
   max-height: 400px;
   background-color: #f8fafc;
@@ -183,6 +179,7 @@ export default {
   flex-direction: column;
   gap: 10px;
   box-shadow: 0 2px 4px rgba(74, 144, 226, 0.1);
+  margin-top: 10px;
 }
 
 /* 文件暂存区样式 */
