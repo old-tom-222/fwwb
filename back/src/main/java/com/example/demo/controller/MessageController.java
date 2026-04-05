@@ -92,6 +92,7 @@ public class MessageController {
         messageRepository.save(userMessage);
         System.out.println("用户消息已保存: " + userMessage);
         
+<<<<<<< HEAD
         // 获取该对话的历史消息，按照时间顺序排序
         List<Message> historyMessages = messageRepository.findByCommunicationId(communicationId);
         historyMessages.sort((m1, m2) -> m1.getCreatedAt().compareTo(m2.getCreatedAt()));
@@ -110,6 +111,11 @@ public class MessageController {
         }
         
         fullContent.append("\n用户需求：\n").append(content).append("\n\n");
+=======
+        // 构建完整的消息内容，包含用户需求和文件内容
+        StringBuilder fullContent = new StringBuilder();
+        fullContent.append("用户需求：\n").append(content).append("\n\n");
+>>>>>>> 25a4306711f13d1c9dfb67cfeed220bd3cbe8b72
         
         if (!fileContents.isEmpty()) {
             for (int i = 0; i < fileContents.size(); i++) {
@@ -197,6 +203,7 @@ public class MessageController {
         userMessage.setCreatedAt(new java.util.Date());
         messageRepository.save(userMessage);
         
+<<<<<<< HEAD
         // 获取该对话的历史消息，按照时间顺序排序
         List<Message> historyMessages = messageRepository.findByCommunicationId(communicationId);
         historyMessages.sort((m1, m2) -> m1.getCreatedAt().compareTo(m2.getCreatedAt()));
@@ -218,6 +225,10 @@ public class MessageController {
         
         // 调用智谱API获取AI回复，传递完整内容和文件内容
         String aiResponse = zhipuAIService.chat(fullContent.toString(), fileContents);
+=======
+        // 调用智谱API获取AI回复，传递文件内容
+        String aiResponse = zhipuAIService.chat(content, fileContents);
+>>>>>>> 25a4306711f13d1c9dfb67cfeed220bd3cbe8b72
         
         // 生成docx文档
         String docxUrl = generateDocxFile(aiResponse, communicationId);
@@ -286,6 +297,7 @@ public class MessageController {
         userMessage.setCreatedAt(new java.util.Date());
         messageRepository.save(userMessage);
         
+<<<<<<< HEAD
         // 获取该对话的历史消息，按照时间顺序排序
         List<Message> historyMessages = messageRepository.findByCommunicationId(communicationId);
         historyMessages.sort((m1, m2) -> m1.getCreatedAt().compareTo(m2.getCreatedAt()));
@@ -307,6 +319,9 @@ public class MessageController {
         
         // 调用智谱API获取AI回复，传递完整内容和文件内容
         String aiResponse = zhipuAIService.chat(fullContent.toString(), fileContents);
+=======
+        String aiResponse = zhipuAIService.chat(content, fileContents);
+>>>>>>> 25a4306711f13d1c9dfb67cfeed220bd3cbe8b72
         
         String xlsxUrl = generateXlsxFile(aiResponse, communicationId);
         
