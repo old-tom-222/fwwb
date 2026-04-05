@@ -76,15 +76,23 @@ export default {
     },
     
     async fetchUserFiles() {
-      if (!this.userId) return
+      console.log('WorkManager: 开始获取用户文件')
+      if (!this.userId) {
+        console.log('WorkManager: 未登录，无法获取用户文件')
+        return
+      }
       
       try {
+        console.log('WorkManager: 发送请求获取用户文件')
         const response = await fetch(`/api/temporary/user/${this.userId}`)
+        console.log('WorkManager: 获取用户文件响应:', response)
         if (response.ok) {
           const files = await response.json()
           console.log('WorkManager: 获取到用户文件:', files)
           this.stagedFiles = Array.isArray(files) ? files : []
           console.log('WorkManager: 暂存区文件:', this.stagedFiles)
+        } else {
+          console.log('WorkManager: 获取用户文件失败，状态:', response.status)
         }
       } catch (error) {
         console.error('获取用户文件失败:', error)
@@ -228,7 +236,7 @@ export default {
     },
     
     addFile() {
-      console.log('WorkManager: 添加文件，触发重新获取用户文件')
+      console.log('WorkManager: 收到add-file事件，触发重新获取用户文件')
       
       // 直接从后端获取用户文件，确保暂存区与temporary集合同步
       this.fetchUserFiles()

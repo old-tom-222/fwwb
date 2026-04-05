@@ -2,6 +2,9 @@
   <div class="modal-overlay" @click="$emit('close')">
     <div class="repository-modal-content" @click.stop>
       <h2>云仓库</h2>
+      <div v-if="importing" class="loading-overlay">
+        正在导入，请耐心等待...
+      </div>
       <div class="repository-content">
         <div class="file-list">
           <div v-if="repositoryFiles.length > 0" class="files">
@@ -9,7 +12,7 @@
               <span class="file-name">{{ file.name }}</span>
               <div class="file-actions">
                 <button class="view-btn small-btn" @click="viewFile(file)">查看</button>
-                <button class="add-btn small-btn" @click="addFileToStaged(file)">放入提问暂存区</button>
+                <button class="import-btn small-btn" @click="importFile(file)">导入此文件</button>
                 <button class="delete-btn small-btn" @click="deleteRepositoryFile(file.id)">删除</button>
               </div>
             </div>
@@ -27,7 +30,7 @@
 </template>
 
 <script>
-import { isSupportedFileFormat } from '../../utils/utils'
+import { isSupportedFileFormat, createFileFromRepository } from '../../utils/utils'
 
 export default {
   name: 'RepositoryModal',
@@ -35,6 +38,11 @@ export default {
     repositoryFiles: {
       type: Array,
       default: () => []
+    }
+  },
+  data() {
+    return {
+      importing: false
     }
   },
   emits: ['close', 'add-file', 'refresh-files'],
@@ -63,11 +71,48 @@ export default {
       window.open(`http://localhost:8081${file.url}`, '_blank')
     },
     
-    addFileToStaged(file) {
-      this.$emit('add-file', {
-        name: file.name,
-        url: file.url
-      })
+    async importFile(file) {
+      console.log('RepositoryModal: 开始导入文件:', file)
+      this.importing = true
+      try {
+        // 从云仓库文件创建File对象
+        console.log('RepositoryModal: 从云仓库文件创建File对象')
+        const fileObject = await createFileFromRepository(file)
+        console.log('RepositoryModal: 成功创建File对象:', fileObject)
+        
+        // 上传文件到后端临时存储
+        console.log('RepositoryModal: 上传文件到后端临时存储')
+        const formData = new FormData()
+        formData.append('file', fileObject)
+        formData.append('userId', localStorage.getItem('userId') || 'anonymous')
+        
+        const response = await fetch('/api/temporary/upload', {
+          method: 'POST',
+          body: formData
+        })
+        
+        console.log('RepositoryModal: 上传文件响应:', response)
+        if (response.ok) {
+          const data = await response.json()
+          console.log('RepositoryModal: 上传成功，响应数据:', data)
+          console.log('RepositoryModal: 触发add-file事件')
+          this.$emit('add-file', data)
+          // 显示成功提示
+          console.log('RepositoryModal: 显示成功提示')
+          alert('文件导入成功')
+          // 自动关闭云仓库
+          console.log('RepositoryModal: 关闭云仓库')
+          this.$emit('close')
+        } else {
+          console.log('RepositoryModal: 上传失败，状态:', response.status)
+          alert('文件导入失败')
+        }
+      } catch (error) {
+        console.error('文件导入失败:', error)
+        alert('文件导入失败')
+      } finally {
+        this.importing = false
+      }
     },
     
     deleteRepositoryFile(fileId) {
@@ -150,13 +195,13 @@ export default {
   background-color: #bbdefb;
 }
 
-.add-btn {
+.import-btn {
   background-color: #e8f5e8;
   color: #2e7d32;
   border-color: #c8e6c9;
 }
 
-.add-btn:hover {
+.import-btn:hover {
   background-color: #c8e6c9;
 }
 
@@ -193,6 +238,23 @@ export default {
   font-size: 14px;
   text-align: center;
   margin-top: 20px;
+}
+
+/* 加载覆盖层样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #4a90e2;
+  z-index: 10;
+  border-radius: 8px;
 }
 
 /* 通用按钮样式 */

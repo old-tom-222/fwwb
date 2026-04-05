@@ -9,11 +9,17 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/api/repository")
@@ -25,7 +31,7 @@ public class RepositoryController {
     private RepositoryRepository repositoryRepository;
 
     // 文件存储目录
-    private static final String UPLOAD_DIR = "uploads";
+    private static final String UPLOAD_DIR = "uploads/repository";
 
     // 初始化上传目录
     public RepositoryController() {
@@ -92,6 +98,29 @@ public class RepositoryController {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+    
+    @Operation(summary = "获取文件", description = "根据文件ID获取文件内容")
+    @GetMapping("/file/{id}")
+    public ResponseEntity<Resource> getFile(@PathVariable String id) throws IOException {
+        Repository repository = repositoryRepository.findById(id).orElse(null);
+        if (repository == null || repository.getUrl() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        // 移除开头的斜杠
+        String filePath = repository.getUrl().startsWith("/") ? repository.getUrl().substring(1) : repository.getUrl();
+        Path path = Paths.get(filePath);
+        Resource resource = new UrlResource(path.toUri());
+        
+        if (resource.exists() || resource.isReadable()) {
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + repository.getName())
+                .body(resource);
+        } else {
+            return ResponseEntity.notFound().build();
         }
     }
 }

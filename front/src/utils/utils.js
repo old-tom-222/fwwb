@@ -22,7 +22,8 @@ export const isSupportedFileFormat = (fileName) => {
 // 从云仓库文件创建文件对象
 export const createFileFromRepository = async (file) => {
   try {
-    const response = await fetch(`http://localhost:8081${file.url}`)
+    // 使用新的文件获取接口
+    const response = await fetch(`http://localhost:8081/api/repository/file/${file.id}`)
     const blob = await response.blob()
     return new File([blob], file.name)
   } catch (error) {
