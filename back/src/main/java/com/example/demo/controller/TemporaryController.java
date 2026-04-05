@@ -159,8 +159,8 @@ public class TemporaryController {
             // 构建AI分析请求
             String prompt = "请分析以下文件内容，提取出5-10个关键词，并为每个关键词提供一个包含该关键词的句子。\n" +
                           "格式要求：\n" +
-                          "关键词1：包含关键词1的句子\n" +
-                          "关键词2：包含关键词2的句子\n" +
+                          "关键词\n" +
+                          "这个关键词对应的句子\n" +
                           "...\n" +
                           fileContent;
             
@@ -183,28 +183,33 @@ public class TemporaryController {
         
         // 按行解析AI响应
         String[] lines = aiResponse.split("\\n");
+        String currentKeyword = null;
+        
         for (String line : lines) {
             line = line.trim();
             if (line.isEmpty()) {
+                // 空白行，重置当前关键词
+                currentKeyword = null;
                 continue;
             }
             
-            // 匹配"关键词：句子"格式
-            int colonIndex = line.indexOf("：");
-            if (colonIndex != -1) {
-                String keyword = line.substring(0, colonIndex).trim();
-                String contextText = line.substring(colonIndex + 1).trim();
+            if (currentKeyword == null) {
+                // 这一行是关键词
+                currentKeyword = line;
+            } else {
+                // 这一行是句子
+                String contextText = line;
                 
-                // 移除关键词前的序号（如果有）
-                keyword = keyword.replaceAll("^\\d+\\.", "").trim();
-                
-                if (!keyword.isEmpty() && !contextText.isEmpty()) {
+                if (!currentKeyword.isEmpty() && !contextText.isEmpty()) {
                     Data data = new Data();
-                    data.setKeyword(keyword);
+                    data.setKeyword(currentKeyword);
                     data.setContextText(contextText);
                     data.setArticleId(articleId);
                     dataRepository.save(data);
                 }
+                
+                // 重置当前关键词，准备处理下一组
+                currentKeyword = null;
             }
         }
     }

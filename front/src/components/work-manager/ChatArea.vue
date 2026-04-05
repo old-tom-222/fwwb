@@ -7,7 +7,7 @@
       <div class="chat-header">
         <h2>{{ selectedCommunicationName }}</h2>
       </div>
-      <div class="messages-container">
+      <div ref="messagesContainer" class="messages-container">
         <div
           v-for="message in sortedMessages"
           :key="message.id"
@@ -85,7 +85,33 @@ export default {
     handleSendMessage(content, files) {
       console.log('ChatArea: 接收到发送消息事件，内容:', content, '文件:', files)
       this.$emit('send-message', content, files)
+    },
+    scrollToBottom() {
+      // 等待DOM更新后再滚动
+      this.$nextTick(() => {
+        const container = this.$refs.messagesContainer
+        if (container) {
+          container.scrollTop = container.scrollHeight
+        }
+      })
     }
+  },
+  watch: {
+    // 当消息列表变化时，滚动到底部
+    messages: {
+      handler() {
+        this.scrollToBottom()
+      },
+      deep: true
+    },
+    // 当选择的对话变化时，滚动到底部
+    selectedCommunicationId() {
+      this.scrollToBottom()
+    }
+  },
+  // 组件挂载后，滚动到底部
+  mounted() {
+    this.scrollToBottom()
   }
 }
 </script>
