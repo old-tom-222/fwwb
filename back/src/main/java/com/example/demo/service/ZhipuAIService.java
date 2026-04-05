@@ -24,10 +24,11 @@ public class ZhipuAIService {
     public String chat(String userMessage, List<String> fileContents) {
         try {
             // 构建消息内容，包含文件内容
-            StringBuilder messageContent = new StringBuilder();
-            messageContent.append("使用中文回答\n");
-            messageContent.append("直接开始正文，不需要任何开场白或引言，例如'这是个...，我将分析它'之类的内容。\n");
-            messageContent.append(userMessage);
+        StringBuilder messageContent = new StringBuilder();
+        messageContent.append("使用中文回答\n");
+        messageContent.append("直接开始正文，不需要任何开场白或引言，例如'这是个...，我将分析它'之类的内容。\n");
+        messageContent.append("只考虑正文部分的生成，不要操心其他的内容，比如建议或提示。\n");
+        messageContent.append(userMessage);
             
             // 添加文件内容
             if (fileContents != null && !fileContents.isEmpty()) {

@@ -72,10 +72,10 @@ public class MessageController {
         // 检查用户是否请求生成文件
         if (content.contains("生成docx") || content.contains("生成一个docx") || content.contains("生成个docx") || content.contains("生成DOCX") || content.contains("生成一个DOCX") || content.contains("生成个DOCX")) {
             System.out.println("用户请求生成docx文件");
-            return generateDocx(communicationId, content, files);
+            return generateDocx(communicationId, content, files, fileIds);
         } else if (content.contains("生成xlsx") || content.contains("生成XLSX") || content.contains("生成一个xlsx") || content.contains("生成个xlsx") || content.contains("生成一个XLSX") || content.contains("生成个XLSX")) {
             System.out.println("用户请求生成xlsx文件");
-            return generateXlsx(communicationId, content, files);
+            return generateXlsx(communicationId, content, files, fileIds);
         }
         
         // 处理上传的文件
@@ -184,16 +184,15 @@ public class MessageController {
     }
     
     @PostMapping("/generate-docx")
-    @Operation(summary = "生成docx文档", description = "根据用户输入生成docx文档并返回下载链接")
-    public Message generateDocx(@RequestParam("communicationId") String communicationId, 
+    @Operation(summary = "生成docx文档", description = "根据用户输入和文件分析关键词，生成docx文档并返回下载链接")
+    public Message generateDocx(@RequestParam("communicationId") String communicationId,
                                @RequestParam("content") String content,
-                               @RequestParam(value = "files", required = false) MultipartFile[] files) {
-        // 处理上传的文件
+                               @RequestParam(value = "files", required = false) MultipartFile[] files,
+                               @RequestParam(value = "fileIds", required = false) String[] fileIds) {
         List<String> fileContents = new ArrayList<>();
         if (files != null && files.length > 0) {
             for (MultipartFile file : files) {
                 try {
-                    // 解析文件内容
                     String fileContent = FileParser.parseFile(file.getOriginalFilename(), file.getInputStream());
                     fileContents.add(fileContent);
                 } catch (IOException e) {
@@ -214,7 +213,7 @@ public class MessageController {
         List<Message> historyMessages = messageRepository.findByCommunicationId(communicationId);
         historyMessages.sort((m1, m2) -> m1.getCreatedAt().compareTo(m2.getCreatedAt()));
         
-        // 构建完整的消息内容，包含历史对话和用户需求
+        // 构建完整的消息内容，包含历史对话、用户需求和文件内容
         StringBuilder fullContent = new StringBuilder();
         fullContent.append("以下是对话历史：\n");
         
@@ -228,6 +227,42 @@ public class MessageController {
         }
         
         fullContent.append("\n用户需求：\n").append(content).append("\n\n");
+        
+        // 添加文件内容
+        if (!fileContents.isEmpty()) {
+            fullContent.append("以下是上传的文件内容：\n");
+            for (String fileContent : fileContents) {
+                fullContent.append(fileContent).append("\n\n");
+            }
+        }
+        
+        // 添加文件对应的关键词
+        if (fileIds != null && fileIds.length > 0) {
+            for (int i = 0; i < fileIds.length; i++) {
+                String fileId = fileIds[i];
+                System.out.println("处理文件ID: " + fileId);
+                List<Data> dataList = dataRepository.findByArticleId(fileId);
+                System.out.println("文件" + (i + 1) + "的关键词数量: " + dataList.size());
+                if (!dataList.isEmpty()) {
+                    fullContent.append("文件").append(i + 1).append("关键词内容：\n");
+                    for (Data data : dataList) {
+                        fullContent.append("关键词：").append(data.getKeyword()).append("，句子：").append(data.getContextText()).append("\n");
+                        System.out.println("添加关键词: " + data.getKeyword() + "，句子: " + data.getContextText());
+                    }
+                    fullContent.append("\n");
+                }
+            }
+        }
+        
+        // 尝试从communicationId获取关键词（兼容旧数据）
+        List<Data> dataList = dataRepository.findByArticleId(communicationId);
+        if (!dataList.isEmpty() && (fileIds == null || fileIds.length == 0)) {
+            fullContent.append("以下是文件的关键词：\n");
+            for (Data data : dataList) {
+                fullContent.append("关键词：").append(data.getKeyword()).append("\n");
+                fullContent.append("相关内容：").append(data.getContextText()).append("\n\n");
+            }
+        }
         
         // 调用智谱API获取AI回复，传递完整内容和文件内容
         String aiResponse = zhipuAIService.chat(fullContent.toString(), fileContents);
@@ -260,13 +295,16 @@ public class MessageController {
      */
     private String generateDocxFile(String content, String communicationId) {
         try {
+            // 使用DocxFormatter美化内容
+            String formattedContent = AIResponseFormatter.formatDocx(content);
+            
             // 使用UUID生成唯一的文件名称，避免使用可能包含中文字符的communicationId
             String fileName = "document_" + java.util.UUID.randomUUID().toString() + "_" + System.currentTimeMillis() + ".docx";
             String filePath = "uploads/" + fileName;
             
             java.io.File file = new java.io.File(filePath);
             java.io.FileWriter writer = new java.io.FileWriter(file);
-            writer.write(content);
+            writer.write(formattedContent);
             writer.close();
             
             return "http://localhost:8081/" + filePath;
@@ -280,7 +318,8 @@ public class MessageController {
     @Operation(summary = "生成xlsx表格", description = "根据用户输入和文件分析关键词，生成xlsx表格并返回下载链接")
     public Message generateXlsx(@RequestParam("communicationId") String communicationId,
                                @RequestParam("content") String content,
-                               @RequestParam(value = "files", required = false) MultipartFile[] files) {
+                               @RequestParam(value = "files", required = false) MultipartFile[] files,
+                               @RequestParam(value = "fileIds", required = false) String[] fileIds) {
         List<String> fileContents = new ArrayList<>();
         if (files != null && files.length > 0) {
             for (MultipartFile file : files) {
@@ -304,7 +343,7 @@ public class MessageController {
         List<Message> historyMessages = messageRepository.findByCommunicationId(communicationId);
         historyMessages.sort((m1, m2) -> m1.getCreatedAt().compareTo(m2.getCreatedAt()));
         
-        // 构建完整的消息内容，包含历史对话和用户需求
+        // 构建完整的消息内容，包含历史对话、用户需求和文件内容
         StringBuilder fullContent = new StringBuilder();
         fullContent.append("以下是对话历史：\n");
         
@@ -318,6 +357,42 @@ public class MessageController {
         }
         
         fullContent.append("\n用户需求：\n").append(content).append("\n\n");
+        
+        // 添加文件内容
+        if (!fileContents.isEmpty()) {
+            fullContent.append("以下是上传的文件内容：\n");
+            for (String fileContent : fileContents) {
+                fullContent.append(fileContent).append("\n\n");
+            }
+        }
+        
+        // 添加文件对应的关键词
+        if (fileIds != null && fileIds.length > 0) {
+            for (int i = 0; i < fileIds.length; i++) {
+                String fileId = fileIds[i];
+                System.out.println("处理文件ID: " + fileId);
+                List<Data> dataList = dataRepository.findByArticleId(fileId);
+                System.out.println("文件" + (i + 1) + "的关键词数量: " + dataList.size());
+                if (!dataList.isEmpty()) {
+                    fullContent.append("文件").append(i + 1).append("关键词内容：\n");
+                    for (Data data : dataList) {
+                        fullContent.append("关键词：").append(data.getKeyword()).append("，句子：").append(data.getContextText()).append("\n");
+                        System.out.println("添加关键词: " + data.getKeyword() + "，句子: " + data.getContextText());
+                    }
+                    fullContent.append("\n");
+                }
+            }
+        }
+        
+        // 尝试从communicationId获取关键词（兼容旧数据）
+        List<Data> dataList = dataRepository.findByArticleId(communicationId);
+        if (!dataList.isEmpty() && (fileIds == null || fileIds.length == 0)) {
+            fullContent.append("以下是文件的关键词：\n");
+            for (Data data : dataList) {
+                fullContent.append("关键词：").append(data.getKeyword()).append("\n");
+                fullContent.append("相关内容：").append(data.getContextText()).append("\n\n");
+            }
+        }
         
         // 调用智谱API获取AI回复，传递完整内容和文件内容
         String aiResponse = zhipuAIService.chat(fullContent.toString(), fileContents);
@@ -340,6 +415,9 @@ public class MessageController {
     
     private String generateXlsxFile(String content, String communicationId) {
         try {
+            // 使用XlsxFormatter美化内容
+            String formattedContent = AIResponseFormatter.formatXlsx(content);
+            
             // 使用UUID生成唯一的文件名称，避免使用可能包含中文字符的communicationId
             String fileName = "table_" + java.util.UUID.randomUUID().toString() + "_" + System.currentTimeMillis() + ".xlsx";
             String filePath = "uploads/" + fileName;
@@ -347,15 +425,53 @@ public class MessageController {
             org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
             org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("分析结果");
             
-            String[] lines = content.split("\n");
+            // 设置默认列宽
+            sheet.setDefaultColumnWidth(15);
+            
+            // 创建单元格样式
+            org.apache.poi.ss.usermodel.CellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER);
+            headerStyle.setVerticalAlignment(org.apache.poi.ss.usermodel.VerticalAlignment.CENTER);
+            headerStyle.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderLeft(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderRight(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            
+            org.apache.poi.ss.usermodel.CellStyle dataStyle = workbook.createCellStyle();
+            dataStyle.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.LEFT);
+            dataStyle.setVerticalAlignment(org.apache.poi.ss.usermodel.VerticalAlignment.CENTER);
+            dataStyle.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            dataStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            dataStyle.setBorderLeft(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            dataStyle.setBorderRight(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            
+            String[] lines = formattedContent.split("\n");
             int rowIndex = 0;
+            boolean isFirstRow = true;
+            
             for (String line : lines) {
                 if (line.trim().isEmpty()) continue;
                 org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIndex++);
-                String[] cells = line.split("[|,，\t]");
+                String[] cells = line.split(",");
                 for (int i = 0; i < cells.length; i++) {
-                    row.createCell(i).setCellValue(cells[i].trim());
+                    org.apache.poi.ss.usermodel.Cell cell = row.createCell(i);
+                    cell.setCellValue(cells[i].trim());
+                    // 为第一行设置标题样式
+                    if (isFirstRow) {
+                        cell.setCellStyle(headerStyle);
+                    } else {
+                        cell.setCellStyle(dataStyle);
+                    }
                 }
+                isFirstRow = false;
+            }
+            
+            // 自动调整列宽
+            for (int i = 0; i < 10; i++) { // 假设最多10列
+                sheet.autoSizeColumn(i);
             }
             
             java.io.FileOutputStream fos = new java.io.FileOutputStream(filePath);

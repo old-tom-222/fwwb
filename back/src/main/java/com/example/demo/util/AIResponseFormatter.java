@@ -48,4 +48,90 @@ public class AIResponseFormatter {
             return response;
         }
     }
+    
+    /**
+     * 美化生成的docx文件内容
+     * @param content 原始文本内容
+     * @return 美化后的文本内容
+     */
+    public static String formatDocx(String content) {
+        if (content == null || content.isEmpty()) {
+            return "";
+        }
+
+        try {
+            // 构建Python进程
+            ProcessBuilder pb = new ProcessBuilder("python", "src/main/java/com/example/demo/util/DocxFormatter.py");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            // 向Python脚本写入输入
+            process.getOutputStream().write(content.getBytes());
+            process.getOutputStream().flush();
+            process.getOutputStream().close();
+
+            // 读取Python脚本的输出，使用UTF-8编码
+            StringBuilder output = new StringBuilder();
+            BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), "UTF-8")
+            );
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+
+            // 等待进程完成
+            process.waitFor();
+
+            return output.toString().trim();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            // 如果执行Python脚本失败，返回原始内容
+            return content;
+        }
+    }
+    
+    /**
+     * 美化生成的xlsx文件内容
+     * @param content 原始文本内容
+     * @return 美化后的文本内容
+     */
+    public static String formatXlsx(String content) {
+        if (content == null || content.isEmpty()) {
+            return "";
+        }
+
+        try {
+            // 构建Python进程
+            ProcessBuilder pb = new ProcessBuilder("python", "src/main/java/com/example/demo/util/XlsxFormatter.py");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            // 向Python脚本写入输入
+            process.getOutputStream().write(content.getBytes());
+            process.getOutputStream().flush();
+            process.getOutputStream().close();
+
+            // 读取Python脚本的输出，使用UTF-8编码
+            StringBuilder output = new StringBuilder();
+            BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), "UTF-8")
+            );
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+
+            // 等待进程完成
+            process.waitFor();
+
+            return output.toString().trim();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            // 如果执行Python脚本失败，返回原始内容
+            return content;
+        }
+    }
 }

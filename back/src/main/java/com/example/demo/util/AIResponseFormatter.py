@@ -36,7 +36,11 @@ def format_markdown(text):
     :param text: 原始文本
     :return: 格式化后的文本
     """
-    # 处理标题（###和####）
+    # 处理标题（#、##、###和####）
+    # 将# 标题 转换为 <h1>标题</h1>
+    text = re.sub(r'^#\s+(.*)$', r'<h1>\1</h1>', text, flags=re.MULTILINE)
+    # 将## 标题 转换为 <h2>标题</h2>
+    text = re.sub(r'^##\s+(.*)$', r'<h2>\1</h2>', text, flags=re.MULTILINE)
     # 将### 标题 转换为 <h3>标题</h3>
     text = re.sub(r'^###\s+(.*)$', r'<h3>\1</h3>', text, flags=re.MULTILINE)
     # 将#### 标题 转换为 <h4>标题</h4>

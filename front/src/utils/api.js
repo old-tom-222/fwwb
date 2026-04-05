@@ -94,6 +94,8 @@ export const messageApi = {
       files.forEach(file => {
         if (file instanceof File) {
           formData.append('files', file)
+        } else if (file && file.id) {
+          formData.append('fileIds', file.id)
         }
       })
     }
