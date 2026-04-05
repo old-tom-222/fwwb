@@ -16,6 +16,9 @@ def format_response(response):
     if not response:
         return ""
     
+    # 处理Markdown格式，转换为正常的美化格式
+    response = format_markdown(response)
+    
     # 处理下载地址，添加HTML链接
     response = add_download_links(response)
     
@@ -26,6 +29,26 @@ def format_response(response):
     response = format_paragraphs(response)
     
     return response
+
+def format_markdown(text):
+    """
+    处理Markdown格式，转换为正常的美化格式
+    :param text: 原始文本
+    :return: 格式化后的文本
+    """
+    # 处理标题（###和####）
+    # 将### 标题 转换为 <h3>标题</h3>
+    text = re.sub(r'^###\s+(.*)$', r'<h3>\1</h3>', text, flags=re.MULTILINE)
+    # 将#### 标题 转换为 <h4>标题</h4>
+    text = re.sub(r'^####\s+(.*)$', r'<h4>\1</h4>', text, flags=re.MULTILINE)
+    
+    # 处理粗体（** **）
+    text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+    
+    # 处理缩进（每行前的单个*）
+    text = re.sub(r'^\*\s+(.*)$', r'<p style="margin-left: 20px;">\1</p>', text, flags=re.MULTILINE)
+    
+    return text
 
 def add_download_links(text):
     """
@@ -71,8 +94,21 @@ def format_paragraphs(text):
     # 处理连续的换行，转换为段落
     text = re.sub(r'\n{3,}', '\n\n', text)
     
-    # 将换行转换为HTML换行标签
-    text = text.replace('\n', '<br>')
+    # 只在非HTML标签内的换行转换为HTML换行标签
+    # 这确保了我们添加的HTML标签不会被破坏
+    
+    # 定义一个函数来处理匹配到的内容
+    def replace_newlines(match):
+        # 如果匹配到的是HTML标签，直接返回
+        if match.group(0).startswith('<') and match.group(0).endswith('>'):
+            return match.group(0)
+        # 否则，将换行转换为<br>
+        return match.group(0).replace('\n', '<br>')
+    
+    # 使用正则表达式匹配HTML标签和非HTML标签部分
+    # 这个正则表达式会匹配所有的HTML标签和非HTML标签部分
+    pattern = r'(<[^>]+>)|([^<]+)'
+    text = re.sub(pattern, replace_newlines, text)
     
     return text
 

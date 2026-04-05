@@ -164,24 +164,22 @@ export default {
       this.messageInput = ''
     },
     
-    async generateDocx() {
+    generateDocument(type) {
       if (!this.messageInput.trim() && this.stagedFiles.length === 0) {
         alert('请输入要分析的内容或上传文件')
         return
       }
       
-      this.$emit('generate-docx', this.messageInput, this.stagedFiles)
+      this.$emit(`generate-${type}`, this.messageInput, this.stagedFiles)
       this.messageInput = ''
     },
     
+    async generateDocx() {
+      this.generateDocument('docx')
+    },
+    
     async generateXlsx() {
-      if (!this.messageInput.trim() && this.stagedFiles.length === 0) {
-        alert('请输入要分析的内容或上传文件')
-        return
-      }
-      
-      this.$emit('generate-xlsx', this.messageInput, this.stagedFiles)
-      this.messageInput = ''
+      this.generateDocument('xlsx')
     }
   }
 }

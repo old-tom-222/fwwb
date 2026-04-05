@@ -26,6 +26,7 @@ public class ZhipuAIService {
             // 构建消息内容，包含文件内容
             StringBuilder messageContent = new StringBuilder();
             messageContent.append("使用中文回答\n");
+            messageContent.append("直接开始正文，不需要任何开场白或引言，例如'这是个...，我将分析它'之类的内容。\n");
             messageContent.append(userMessage);
             
             // 添加文件内容

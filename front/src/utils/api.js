@@ -84,8 +84,8 @@ export const messageApi = {
     }
   },
   
-  // 生成 docx
-  generateDocx: async (communicationId, content, files) => {
+  // 生成文档
+  generateDocument: async (type, communicationId, content, files) => {
     const formData = new FormData()
     formData.append('communicationId', communicationId)
     formData.append('content', typeof content === 'string' ? content : '')
@@ -98,32 +98,21 @@ export const messageApi = {
       })
     }
     
-    await axios.post(`${API_BASE_URL}/messages/generate-docx`, formData, {
+    await axios.post(`${API_BASE_URL}/messages/generate-${type}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
   },
   
+  // 生成 docx
+  generateDocx: async (communicationId, content, files) => {
+    await messageApi.generateDocument('docx', communicationId, content, files)
+  },
+  
   // 生成 xlsx
   generateXlsx: async (communicationId, content, files) => {
-    const formData = new FormData()
-    formData.append('communicationId', communicationId)
-    formData.append('content', typeof content === 'string' ? content : '')
-    
-    if (files && Array.isArray(files)) {
-      files.forEach(file => {
-        if (file instanceof File) {
-          formData.append('files', file)
-        }
-      })
-    }
-    
-    await axios.post(`${API_BASE_URL}/messages/generate-xlsx`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+    await messageApi.generateDocument('xlsx', communicationId, content, files)
   }
 }
 

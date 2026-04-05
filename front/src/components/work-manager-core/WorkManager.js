@@ -286,7 +286,7 @@ export default {
       }
     },
     
-    async generateDocx(content, files) {
+    async generateDocument(type, content, files) {
       if (!this.isLoggedIn) {
         alert('请先登录')
         return
@@ -303,47 +303,31 @@ export default {
         // 确保content是字符串
         const contentStr = typeof content === 'string' ? content : ''
         const processedFiles = await this.processFiles(files)
-        await messageApi.generateDocx(this.selectedCommunicationId, contentStr, processedFiles)
         
-        alert('文档生成成功，请在对话中查看下载链接')
+        if (type === 'docx') {
+          await messageApi.generateDocx(this.selectedCommunicationId, contentStr, processedFiles)
+          alert('文档生成成功，请在对话中查看下载链接')
+        } else if (type === 'xlsx') {
+          await messageApi.generateXlsx(this.selectedCommunicationId, contentStr, processedFiles)
+          alert('表格生成成功，请在对话中查看下载链接')
+        }
+        
         this.stagedFiles = []
         await this.fetchMessages(this.selectedCommunicationId)
       } catch (error) {
-        console.error('生成文档失败:', error)
-        alert('生成文档失败: ' + error.message)
+        console.error(`生成${type === 'docx' ? '文档' : '表格'}失败:`, error)
+        alert(`生成${type === 'docx' ? '文档' : '表格'}失败: ` + error.message)
       } finally {
         this.loading = false
       }
     },
     
+    async generateDocx(content, files) {
+      await this.generateDocument('docx', content, files)
+    },
+    
     async generateXlsx(content, files) {
-      if (!this.isLoggedIn) {
-        alert('请先登录')
-        return
-      }
-      
-      if (!this.selectedCommunicationId) {
-        alert('请先选择一个对话')
-        return
-      }
-      
-      this.loading = true
-      
-      try {
-        // 确保content是字符串
-        const contentStr = typeof content === 'string' ? content : ''
-        const processedFiles = await this.processFiles(files)
-        await messageApi.generateXlsx(this.selectedCommunicationId, contentStr, processedFiles)
-        
-        alert('表格生成成功，请在对话中查看下载链接')
-        this.stagedFiles = []
-        await this.fetchMessages(this.selectedCommunicationId)
-      } catch (error) {
-        console.error('生成表格失败:', error)
-        alert('生成表格失败: ' + error.message)
-      } finally {
-        this.loading = false
-      }
+      await this.generateDocument('xlsx', content, files)
     },
     
     async processFiles(files) {
