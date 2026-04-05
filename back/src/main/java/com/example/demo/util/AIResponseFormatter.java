@@ -27,10 +27,10 @@ public class AIResponseFormatter {
             process.getOutputStream().flush();
             process.getOutputStream().close();
 
-            // 读取Python脚本的输出
+            // 读取Python脚本的输出，使用UTF-8编码
             StringBuilder output = new StringBuilder();
             BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream())
+                new InputStreamReader(process.getInputStream(), "UTF-8")
             );
 
             String line;

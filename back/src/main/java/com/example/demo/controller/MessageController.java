@@ -69,6 +69,15 @@ public class MessageController {
         System.out.println("文件数量: " + (files != null ? files.length : 0));
         System.out.println("文件ID数量: " + (fileIds != null ? fileIds.length : 0));
         
+        // 检查用户是否请求生成文件
+        if (content.contains("生成docx") || content.contains("生成一个docx") || content.contains("生成个docx") || content.contains("生成DOCX") || content.contains("生成一个DOCX") || content.contains("生成个DOCX")) {
+            System.out.println("用户请求生成docx文件");
+            return generateDocx(communicationId, content, files);
+        } else if (content.contains("生成xlsx") || content.contains("生成XLSX") || content.contains("生成一个xlsx") || content.contains("生成个xlsx") || content.contains("生成一个XLSX") || content.contains("生成个XLSX")) {
+            System.out.println("用户请求生成xlsx文件");
+            return generateXlsx(communicationId, content, files);
+        }
+        
         // 处理上传的文件
         List<String> fileContents = new ArrayList<>();
         if (files != null && files.length > 0) {
@@ -251,7 +260,8 @@ public class MessageController {
      */
     private String generateDocxFile(String content, String communicationId) {
         try {
-            String fileName = "document_" + communicationId + "_" + System.currentTimeMillis() + ".docx";
+            // 使用UUID生成唯一的文件名称，避免使用可能包含中文字符的communicationId
+            String fileName = "document_" + java.util.UUID.randomUUID().toString() + "_" + System.currentTimeMillis() + ".docx";
             String filePath = "uploads/" + fileName;
             
             java.io.File file = new java.io.File(filePath);
@@ -330,7 +340,8 @@ public class MessageController {
     
     private String generateXlsxFile(String content, String communicationId) {
         try {
-            String fileName = "table_" + communicationId + "_" + System.currentTimeMillis() + ".xlsx";
+            // 使用UUID生成唯一的文件名称，避免使用可能包含中文字符的communicationId
+            String fileName = "table_" + java.util.UUID.randomUUID().toString() + "_" + System.currentTimeMillis() + ".xlsx";
             String filePath = "uploads/" + fileName;
             
             org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();

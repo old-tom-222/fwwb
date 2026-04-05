@@ -50,7 +50,7 @@ public class ZhipuAIService {
                 Map.of("role", "user", "content", messageContent.toString())
             ));
             requestBody.put("temperature", 0.7);
-            requestBody.put("max_tokens", 1000);
+        requestBody.put("max_tokens", 4096);
 
             // 发送请求
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);

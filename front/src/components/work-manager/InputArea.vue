@@ -26,8 +26,6 @@
       <!-- 按钮区域 -->
       <div class="button-section">
         <div class="action-buttons">
-          <button class="action-btn small-btn" @click="generateDocx" :disabled="internalLoading">docx</button>
-          <button class="action-btn small-btn" @click="generateXlsx" :disabled="internalLoading">xlsx</button>
           <button class="hide-btn small-btn" @click="toggleInputArea" :disabled="internalLoading">隐藏</button>
         </div>
         <div class="send-buttons">
@@ -162,24 +160,6 @@ export default {
       console.log('InputArea: 发送消息，内容:', this.messageInput, '文件:', this.stagedFiles)
       this.$emit('send-message', this.messageInput, this.stagedFiles)
       this.messageInput = ''
-    },
-    
-    generateDocument(type) {
-      if (!this.messageInput.trim() && this.stagedFiles.length === 0) {
-        alert('请输入要分析的内容或上传文件')
-        return
-      }
-      
-      this.$emit(`generate-${type}`, this.messageInput, this.stagedFiles)
-      this.messageInput = ''
-    },
-    
-    async generateDocx() {
-      this.generateDocument('docx')
-    },
-    
-    async generateXlsx() {
-      this.generateDocument('xlsx')
     }
   }
 }

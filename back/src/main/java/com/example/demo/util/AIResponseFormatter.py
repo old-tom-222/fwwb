@@ -42,6 +42,10 @@ def format_markdown(text):
     # 将#### 标题 转换为 <h4>标题</h4>
     text = re.sub(r'^####\s+(.*)$', r'<h4>\1</h4>', text, flags=re.MULTILINE)
     
+    # 处理使用** **作为小标题的情况
+    # 将** 小标题 **转换为 <h3>小标题</h3>
+    text = re.sub(r'^\*\*\s+(.*?)\s+\*\*$', r'<h3>\1</h3>', text, flags=re.MULTILINE)
+    
     # 处理粗体（** **）
     text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
     
@@ -57,15 +61,15 @@ def add_download_links(text):
     :return: 添加了HTML链接的文本
     """
     # 匹配HTTP/HTTPS链接
-    url_pattern = r'(https?://[\w\-._~:/?#[\]@!$&\'()*+,;=.]+)'
+    url_pattern = r'(https?://[\w\-_~:/?#\[\]@!$&\'()*+,;=.]+)'
     
     def replace_url(match):
         url = match.group(1)
         # 检查是否是下载链接（简单判断，实际可能需要更复杂的逻辑）
         if any(ext in url.lower() for ext in ['.pdf', '.docx', '.xlsx', '.txt', '.md', '.zip', '.rar']):
-            return f'<a href="{url}" target="_blank" rel="noopener noreferrer">下载文件</a>'
+            return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 8px 16px; background-color: #4a90e2; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: bold;">下载</a>'
         else:
-            return f'<a href="{url}" target="_blank" rel="noopener noreferrer">{url}</a>'
+            return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + '</a>'
     
     return re.sub(url_pattern, replace_url, text)
 

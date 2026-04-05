@@ -29,8 +29,6 @@
         :loading="loading"
         :stagedFiles="stagedFiles"
         @send-message="handleSendMessage"
-        @generate-docx="$emit('generate-docx', ...arguments)"
-        @generate-xlsx="$emit('generate-xlsx', ...arguments)"
         @add-file="$emit('add-file', ...arguments)"
         @remove-file="$emit('remove-file', ...arguments)"
       />
