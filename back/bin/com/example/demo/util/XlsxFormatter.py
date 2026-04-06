@@ -129,15 +129,15 @@ def filter_table_content(text):
                 columns = len(line.split(','))
                 if columns == max_columns and max_columns > 1:
                     table_lines.append(line)
+            # 保留空行作为分隔
+            # else:
+            #     table_lines.append('')
     
-    # 如果没有找到合适的表格数据，返回原始内容的处理版本
+    # 如果没有找到合适的表格数据，尝试寻找可能的表格结构
     if not table_lines:
-        # 尝试将文本转换为简单的表格格式
-        # 至少返回一行数据，避免生成空文件
-        table_lines.append("内容,分析结果")
         for line in lines:
-            if line.strip():
-                table_lines.append(f"{line.strip()},")
+            if line.strip() and ',' in line:
+                table_lines.append(line)
     
     return '\n'.join(table_lines)
 
