@@ -320,13 +320,13 @@ public class MessageController {
         // 构建包含下载链接的回复
         String responseWithLink = "我已经为您生成了docx文档，请点击以下链接下载：\n" + docxUrl;
         
-        // 直接使用原始链接，不使用AIResponseFormatter
-        // 这样可以确保链接格式正确，不会被HTML标签破坏
+        // 使用AIResponseFormatter美化回复，将下载链接转换为可点击的按钮
+        String formattedResponse = AIResponseFormatter.formatResponse(responseWithLink);
         
         // 保存AI回复（status=0）
         Message aiMessage = new Message();
         aiMessage.setCommunicationId(communicationId);
-        aiMessage.setContent(responseWithLink);
+        aiMessage.setContent(formattedResponse);
         aiMessage.setStatus(0);
         aiMessage.setCreatedAt(new java.util.Date());
         messageRepository.save(aiMessage);
@@ -512,12 +512,12 @@ public class MessageController {
         
         String responseWithLink = "我已经为您生成了xlsx表格，请点击以下链接下载：\n" + xlsxUrl;
         
-        // 直接使用原始链接，不使用AIResponseFormatter
-        // 这样可以确保链接格式正确，不会被HTML标签破坏
+        // 使用AIResponseFormatter美化回复，将下载链接转换为可点击的按钮
+        String formattedResponse = AIResponseFormatter.formatResponse(responseWithLink);
         
         Message aiMessage = new Message();
         aiMessage.setCommunicationId(communicationId);
-        aiMessage.setContent(responseWithLink);
+        aiMessage.setContent(formattedResponse);
         aiMessage.setStatus(0);
         aiMessage.setCreatedAt(new java.util.Date());
         messageRepository.save(aiMessage);
