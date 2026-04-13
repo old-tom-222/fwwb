@@ -33,6 +33,10 @@ def format_markdown(text):
     :param text: 原始文本
     :return: 格式化后的文本
     """
+    # 处理HTML标签
+    # 移除HTML标签，保留标签内的内容
+    text = re.sub(r'<[^>]+>', r'', text)
+    
     # 处理标题（#、##、###和####）
     # 将# 标题 转换为 标题
     text = re.sub(r'^#\s+(.*)$', r'\1\n', text, flags=re.MULTILINE)
@@ -61,6 +65,13 @@ def format_paragraphs(text):
     :param text: 原始文本
     :return: 格式化后的文本
     """
+    # 处理连续的空格和制表符
+    text = re.sub(r'\s+', ' ', text)
+    
+    # 处理句子之间的分隔
+    # 在句号、问号、感叹号后添加换行
+    text = re.sub(r'([。！？.!?])\s*', r'\1\n', text)
+    
     # 处理连续的换行，转换为单个换行
     text = re.sub(r'\n{3,}', '\n\n', text)
     
