@@ -22,8 +22,8 @@ public class AIResponseFormatter {
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
-            // 向Python脚本写入输入
-            process.getOutputStream().write(response.getBytes());
+            // 向Python脚本写入输入，使用UTF-8编码
+            process.getOutputStream().write(response.getBytes("UTF-8"));
             process.getOutputStream().flush();
             process.getOutputStream().close();
 
@@ -65,8 +65,8 @@ public class AIResponseFormatter {
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
-            // 向Python脚本写入输入
-            process.getOutputStream().write(content.getBytes());
+            // 向Python脚本写入输入，使用UTF-8编码
+            process.getOutputStream().write(content.getBytes("UTF-8"));
             process.getOutputStream().flush();
             process.getOutputStream().close();
 
@@ -108,8 +108,8 @@ public class AIResponseFormatter {
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
-            // 向Python脚本写入输入
-            process.getOutputStream().write(content.getBytes());
+            // 向Python脚本写入输入，使用UTF-8编码
+            process.getOutputStream().write(content.getBytes("UTF-8"));
             process.getOutputStream().flush();
             process.getOutputStream().close();
 
