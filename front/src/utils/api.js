@@ -71,17 +71,13 @@ export const messageApi = {
       })
     }
     
-    try {
-      const response = await axios.post(`${API_BASE_URL}/messages/chat`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      console.log('API: 发送消息成功，响应:', response.data)
-    } catch (error) {
-      console.error('API: 发送消息失败:', error)
-      throw error
-    }
+    const response = await axios.post(`${API_BASE_URL}/messages/chat`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    console.log('API: 发送消息成功，响应:', response.data)
+    return response.data
   },
   
   // 生成文档

@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
@@ -13,11 +14,15 @@ import java.util.Map;
 
 @Service
 public class ZhipuAIService {
-    private static final String API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"; 
-    private static final String API_KEY = "140ffc7983a847b6ba96ce451d79a2fc.jJ3Tshd0XsH4LJDL";
+    private final String apiUrl;
+    private final String apiKey;
     private final RestTemplate restTemplate;
 
-    public ZhipuAIService() {
+    public ZhipuAIService(
+            @Value("${zhipuai.api-url}") String apiUrl,
+            @Value("${zhipuai.api-key}") String apiKey) {
+        this.apiUrl = apiUrl;
+        this.apiKey = apiKey;
         this.restTemplate = new RestTemplate();
     }
 
@@ -39,24 +44,21 @@ public class ZhipuAIService {
                 }
             }
 
-            // 设置请求头
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + API_KEY);
+            headers.set("Authorization", "Bearer " + apiKey);
             headers.set("Content-Type", "application/json");
 
-            // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", "glm-4");
             requestBody.put("messages", List.of(
                 Map.of("role", "user", "content", messageContent.toString())
             ));
             requestBody.put("temperature", 0.7);
-        requestBody.put("max_tokens", 4096);
+            requestBody.put("max_tokens", 4096);
 
-            // 发送请求
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
             ResponseEntity<Map> response = restTemplate.exchange(
-                API_URL, HttpMethod.POST, entity, Map.class
+                apiUrl, HttpMethod.POST, entity, Map.class
             );
 
             // 解析响应

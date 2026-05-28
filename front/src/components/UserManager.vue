@@ -56,7 +56,7 @@ export default {
       this.loading = true
       this.error = null
       try {
-        const response = await axios.get('http://localhost:8081/api/users')
+        const response = await axios.get('/api/users')
         this.users = response.data
       } catch (error) {
         this.error = '获取用户数据失败'
@@ -69,7 +69,7 @@ export default {
       this.loading = true
       this.error = null
       try {
-        await axios.post('http://localhost:8081/api/users', this.newUser)
+        await axios.post('/api/users', this.newUser)
         this.fetchUsers()
         this.resetForm()
       } catch (error) {
